@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}Masuk – LAFEX-AI{% endblock %}
+{% block body %}
+<main class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow p-6 space-y-4">
+    <h1 class="text-2xl font-bold text-center">LAFEX-AI</h1>
+    <p class="text-center text-sm text-slate-500">Masuk / Tama / Entrar / Sign in</p>
+
+    <form method="post" action="{% url 'account_login' %}" class="space-y-3">
+      {% csrf_token %}
+      {% for e in form.non_field_errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+      <div><label class="block text-sm mb-1" for="id_login">Email</label>
+        <input id="id_login" name="login" type="email" required autofocus autocomplete="email" class="w-full border rounded-lg px-3 py-2" value="{{ form.login.value|default:'' }}"></div>
+      <div><label class="block text-sm mb-1" for="id_password">Password</label>
+        <input id="id_password" name="password" type="password" required autocomplete="current-password" class="w-full border rounded-lg px-3 py-2"></div>
+      {% for e in form.login.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+      {% for e in form.password.errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+      {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+      <button class="w-full bg-red-700 hover:bg-red-800 text-white rounded-lg py-2 font-medium">Masuk</button>
+    </form>
+
+    {% if FACEBOOK_ENABLED %}
+    <div class="flex items-center gap-2 text-xs text-slate-400"><span class="flex-1 border-t"></span>atau<span class="flex-1 border-t"></span></div>
+    <form method="post" action="{% provider_login_url 'facebook' process='login' %}">
+      {% csrf_token %}
+      <button class="w-full bg-[#1877f2] hover:bg-[#1468d6] text-white rounded-lg py-2 font-medium">Lanjut dengan Facebook</button>
+    </form>
+    {% endif %}
+
+    <p class="text-sm text-center">Belum punya akun? <a class="text-red-700 underline" href="{% url 'account_signup' %}">Daftar</a>
+      · <a class="text-slate-500 underline" href="{% url 'account_reset_password' %}">Lupa password?</a></p>
+  </div>
+</main>
+{% endblock %}

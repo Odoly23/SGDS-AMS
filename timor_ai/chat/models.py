@@ -78,6 +78,9 @@ class Message(models.Model):
     sources = models.JSONField("Sumber RAG", default=list, blank=True)
     model_name = models.CharField(max_length=100, blank=True)
     latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True, blank=True)
+    output_tokens = models.PositiveIntegerField(null=True, blank=True)
+    credits_charged = models.PositiveIntegerField(null=True, blank=True, help_text="Poin yang dipotong dari user untuk jawaban ini")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

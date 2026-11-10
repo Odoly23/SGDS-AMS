@@ -53,6 +53,7 @@ timor_ai/
 ├── chat/                     # models, views, urls, serializers, services, llm, detect, prompts, admin
 ├── datasets/                 # models, admin (crowdsourcing), management/commands, seed/
 ├── rag/                      # models, admin (upload PDF/TXT), services (chunk/embed/search)
+├── billing/                  # poin prabayar, paket, voucher (ala pulsa), admin laporan
 ├── templates/                # base.html, chat/chat.html, registration/{login,signup}.html
 ├── training/finetune_lora.py # LoRA
 └── evaluation/eval_language.py
@@ -116,7 +117,7 @@ copy .env.example .env          # lalu edit isinya
 python manage.py migrate                 # buat tabel
 python manage.py seed_phrases            # isi 33 bahasa + 100 kalimat x 3 bahasa
 python manage.py setup_groups            # grup Kontributor & Reviewer
-python manage.py createsuperuser         # akun admin
+python manage.py createsuperuser         # akun admin (login admin di /admin/)
 python manage.py runserver
 ```
 Buka http://127.0.0.1:8000/ (chat) dan http://127.0.0.1:8000/admin/ (admin).
@@ -136,6 +137,10 @@ Tes otomatis: `python manage.py test` · Evaluasi bahasa: `python evaluation/eva
 | POST | `/api/detect/` | `{"text": "..."}` → bahasa terdeteksi |
 | GET | `/api/conversations/` | riwayat milik user |
 | GET/DELETE | `/api/conversations/<id>/` | isi / hapus percakapan |
+| GET | `/api/wallet/` | saldo poin + daftar paket |
+| POST | `/api/redeem/` | `{"code": "ABCD-EFGH-JKLM"}` tukar voucher jadi poin |
+
+Kode error `/api/chat/`: **402** poin habis, **429** terlalu cepat, **503** model gagal (user tidak ditagih).
 
 ```json
 // Tanya jawab
@@ -146,7 +151,24 @@ Tes otomatis: `python manage.py test` · Evaluasi bahasa: `python evaluation/eva
 
 ---
 
-## 5. Mengaktifkan Gemma 2 2B (langkah demi langkah)
+## 5. Mengaktifkan model AI
+
+Ada dua jalur. **Jalur A (bagian 5A): model berbayar lewat API**, Anda bayar per token, tanpa GPU, cocok untuk berjualan. **Jalur B: Gemma 2 lokal**, gratis per token tapi butuh RAM/GPU dan lebih lemah. Keduanya memakai kode yang sama; pilih lewat `LLM_BACKEND` di `.env`.
+
+### 5A. Model berbayar lewat API (`LLM_BACKEND=anthropic`)
+1. Buat akun di console.anthropic.com, isi saldo, buat **API key**, dan **atur batas pengeluaran bulanan** di Console (pengaman paling penting).
+2. `.env`: `LLM_BACKEND=anthropic`, `ANTHROPIC_API_KEY=...`, `ANTHROPIC_MODEL=...`, lalu isi `PRICE_IN_PER_M` / `PRICE_OUT_PER_M` sesuai model itu.
+3. Kunci hanya ada di server; browser user tidak pernah melihatnya. Jangan commit `.env`.
+
+| Model (`ANTHROPIC_MODEL`) | Harga per 1 juta token (masuk / keluar) | Catatan |
+|---|---|---|
+| `claude-opus-5-5` (default) | $4 / $20 | paling pintar, paling mahal |
+| `claude-sonnet-5-5` | $2 / $10 | menengah |
+| `claude-haiku-5-5` | $0,10 / $0,50 | jauh lebih murah, kualitas lebih sederhana |
+
+Harga di atas dari daftar yang saya miliki per awal November 2026; **cek halaman harga resmi sebelum menetapkan harga jual**. Memilih model adalah keputusan Anda; uji kualitas Tetun/Portugis dengan `evaluation/eval_language.py` pada tiap model.
+
+### 5B. Gemma 2 2B lokal (langkah demi langkah)
 
 **A. Akun & token Hugging Face (sekali saja, harus Anda lakukan sendiri)**
 1. Daftar di https://huggingface.co lalu login.
@@ -259,3 +281,61 @@ dapat ditranskripsi lalu diunggah sebagai Dokumen RAG (dengan izin).
 2. Unggah 3–5 dokumen kecil (sejarah, budaya) → uji RAG dengan `EMBEDDING_BACKEND=sentence-transformers`.
 3. Aktifkan Gemma 2 2B (`hf`) → jalankan `evaluation/eval_language.py`.
 4. Kumpulkan data komunitas → verifikasi → LoRA → bandingkan skor evaluasi sebelum/sesudah.
+
+
+---
+
+## 9. Berjualan seperti pulsa (poin prabayar)
+
+**Konsep:** user membeli *paket* → mendapat **poin** → tiap jawaban AI memotong poin sesuai token yang benar-benar terpakai. Poin habis = tidak bisa chat sampai isi ulang. Terjemahan yang diambil dari basis data (tanpa memanggil model) **gratis**.
+
+```
+biaya_poin = ceil( (token_masuk x harga_in + token_keluar x harga_out) / 1.000.000 x MARGIN x POINTS_PER_USD )
+```
+Semua angka di `.env` (`PRICE_*`, `BILLING_MARGIN`, `POINTS_PER_USD`).
+
+**Perkiraan biaya** (satu tanya jawab RAG ≈ 1.500 token masuk + 300 keluar, belum termasuk token "berpikir" model; ukur sendiri lewat Admin > Transaksi poin):
+
+| Model | Biaya Anda / jawaban | Poin dipotong (margin 3x, 1.000 poin = $1) | Jawaban per paket $1 |
+|---|---|---|---|
+| Opus 5.5 | ≈ $0,012 | ≈ 36 | ≈ 27 |
+| Sonnet 5.5 | ≈ $0,006 | ≈ 18 | ≈ 55 |
+| Haiku 5.5 | ≈ $0,0003 | 1 (batas minimum) | ≈ 1.000 |
+
+Selisihnya sangat besar, jadi **pilihan model menentukan harga paket Anda**. Poin gratis untuk user baru (`TRIAL_CREDITS`, default 100) adalah **biaya dari kantong Anda**; kecilkan jika Anda memakai model mahal.
+
+**Alur penjualan:**
+1. Admin > Paket: buat paket (mis. "Paket $1 = 1.000 poin", "Paket $5 = 6.000 poin").
+2. Cetak voucher: `python manage.py make_vouchers --package 1 --count 50 --batch kios-dili --out voucher.csv` (opsi `--days 90` untuk masa berlaku).
+3. Jual kode lewat agen/kios/WhatsApp. User memasukkan kode di kolom "Kode voucher" di menu samping.
+4. Kode hanya tampil sekali di CSV; database menyimpan hash-nya. Voucher sekali pakai; salah ketik 5x = terkunci 15 menit.
+5. Admin > Transaksi poin: laporan pemakaian + Export CSV. Admin > Dompet: tambah poin manual (mis. kompensasi).
+
+**Soal "seperti pulsa Telkomsel":** kode voucher di atas meniru pengalaman pulsa (beli kartu/kode, masukkan, saldo bertambah) dan **sudah jalan**. Menagih langsung dari pulsa operator (*carrier billing*) **belum ada** di kode ini: itu butuh kontrak dengan operator atau agregator dan API-nya. Setahu saya anak usaha Telkomsel di Timor-Leste bernama **Telkomcel**; tanyakan langsung ke mereka tentang reseller atau carrier billing. Sampai ada, pembayaran bisa lewat agen yang menerima tunai/transfer lalu menjual voucher. Saya tidak tahu skema resmi Telkomcel; jangan menulis "bayar pakai pulsa Telkomcel" di promosi sebelum ada perjanjian tertulis.
+
+**Pengaman biaya Anda:** (1) batas pengeluaran di Console API; (2) saldo minimum `MIN_BALANCE_TO_CHAT`; (3) batas `MAX_MESSAGES_PER_MINUTE` per user; (4) verifikasi email wajib sebelum dapat poin gratis; (5) panggilan model yang gagal tidak menagih user. Untuk produksi dengan banyak proses (gunicorn), ganti cache bawaan (memori per proses) dengan Redis agar batas kecepatan dan kunci voucher berlaku untuk semua proses.
+
+---
+
+## 10. Login: email dan Facebook
+
+Memakai **django-allauth**. User bisa daftar dengan **email + password** (wajib klik tautan verifikasi di email) atau **Facebook saja** (tanpa password). Jika akun Facebook tidak memberi email, user diminta mengisinya.
+
+**Email:** isi `EMAIL_HOST`, `EMAIL_HOST_USER`, dst. di `.env` (SMTP, mis. dari penyedia email Anda). Tanpa itu, email verifikasi tampil di terminal (cukup untuk belajar). Untuk uji lokal cepat: `ACCOUNT_EMAIL_VERIFICATION=optional`.
+
+**Facebook (dilakukan sekali di developers.facebook.com):**
+1. Buat App baru dengan fitur **Facebook Login**.
+2. Settings > Basic: salin **App ID** dan **App Secret** ke `.env` (`FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`). Tombol Facebook baru muncul jika keduanya terisi.
+3. Facebook Login > Settings > **Valid OAuth Redirect URIs**: `https://domain-anda/accounts/facebook/login/callback/` (lokal: `http://localhost:8000/accounts/facebook/login/callback/`).
+4. Admin Django > **Sites**: ubah `example.com` menjadi domain Anda.
+5. Selama app berstatus *Development*, hanya admin/penguji app yang bisa login. Agar umum bisa login, app harus *Live*, dan Meta mewajibkan **URL kebijakan privasi** dan petunjuk **penghapusan data**. Syarat Meta bisa berubah; cek dokumen Facebook Login terbaru.
+
+**Kebijakan privasi (wajib ditulis sebelum buka untuk umum):** pesan user dikirim ke penyedia model (jalur 5A) agar dijawab; sebutkan itu. Kode hanya mengirim isi percakapan dan konteks dokumen, bukan email/nama user.
+
+**Yang sudah diuji / belum:** halaman login & daftar, kewajiban verifikasi email, dan tombol Facebook (muncul hanya jika dikonfigurasi) sudah diuji otomatis. **Alur OAuth Facebook sungguhan belum diuji** (butuh app Facebook Anda). Panggilan ke API model diuji dengan klien palsu; **belum pernah dipanggil dengan kunci asli** dari lingkungan pengembangan.
+
+---
+
+## 11. Bahasa daerah (Mambae, dll.) dan Inggris di model berbayar
+
+Pilihan bahasa jawaban (Tetun, Portugis, Inggris, Indonesia, atau bahasa daerah) dikirim ke model lewat instruksi sistem. **Inggris, Portugis, Indonesia** berjalan baik di model besar. **Tetun** cukup baik tetapi perlu dicek penutur asli. **Mambae dan bahasa daerah lain**: model besar pun belum pernah dilatih dengan data memadai, jadi ia bisa salah atau mengarang. Itu sebabnya aplikasi (1) memberi peringatan eksperimental, (2) memakai **contoh terverifikasi dari komunitas** sebagai petunjuk di prompt, dan (3) mengutamakan **memori terjemahan** untuk kalimat yang sudah ada. Kualitas Mambae akan naik sebanding dengan jumlah kalimat terverifikasi (bagian 7), bukan dengan model yang lebih mahal.

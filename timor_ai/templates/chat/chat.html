@@ -9,10 +9,17 @@
       <button id="newChat" class="flex-1 bg-red-700 hover:bg-red-800 rounded-lg py-2 text-sm font-medium">+ Chat baru</button>
     </div>
     <ul id="convList" class="flex-1 overflow-y-auto px-2 space-y-1 text-sm"></ul>
-    <div class="p-3 border-t border-slate-700 text-xs space-y-1">
-      <div>{{ user.username }}</div>
+    <div class="p-3 border-t border-slate-700 text-xs space-y-2">
+      <div class="flex items-baseline justify-between"><span>Poin Anda</span><strong id="balance" class="text-lg text-orange-300">…</strong></div>
+      <form id="redeemForm" class="flex gap-1">
+        <input id="voucher" maxlength="20" placeholder="Kode voucher" autocomplete="off" aria-label="Kode voucher"
+               class="min-w-0 flex-1 rounded px-2 py-1 text-slate-900 uppercase">
+        <button class="rounded bg-orange-400 hover:bg-orange-300 text-slate-900 px-2 font-medium">Isi</button>
+      </form>
+      <p id="redeemMsg" class="min-h-4"></p>
+      <div class="truncate">{{ user.email|default:user.username }}</div>
       {% if user.is_staff %}<a class="underline" href="{% url 'admin:index' %}">Admin</a> · {% endif %}
-      <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="underline">Keluar</button></form>
+      <form method="post" action="{% url 'account_logout' %}" class="inline">{% csrf_token %}<button class="underline">Keluar</button></form>
     </div>
   </aside>
 
@@ -72,6 +79,19 @@ async function api(url, opts = {}) {
 
 let languages = [], conversationId = null;
 
+// ---------- poin ----------
+function showBalance(n) { $("balance").textContent = Number(n).toLocaleString("id-ID"); }
+async function loadWallet() { try { showBalance((await api("/api/wallet/")).balance); } catch (e) { $("balance").textContent = "?"; } }
+$("redeemForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = $("voucher").value.trim(); if (!code) return;
+  try {
+    const r = await api("/api/redeem/", {method: "POST", body: JSON.stringify({code})});
+    showBalance(r.balance); $("voucher").value = "";
+    $("redeemMsg").textContent = `+${r.added} poin (${r.package})`;
+  } catch (err) { $("redeemMsg").textContent = err.message; }
+});
+
 // ---------- pilihan bahasa ----------
 function fillLangSelect(sel, withAuto) {
   sel.innerHTML = "";
@@ -92,6 +112,7 @@ async function init() {
   fillLangSelect($("srcLang"), true);
   $("lang").value = "tet";
   await loadConversations();
+  loadWallet();
 }
 
 // ---------- mode ----------
@@ -152,6 +173,7 @@ $("chatForm").addEventListener("submit", async (e) => {
     if (mode === "translate" && src) body.source_language = src;
     const data = await api("/api/chat/", {method: "POST", body: JSON.stringify(body)});
     conversationId = data.conversation_id;
+    showBalance(data.balance);
     wait.textContent = data.reply.content;
     const meta = sourcesMeta(data.reply);
     if (meta) { const m = document.createElement("div"); m.className = "text-xs mt-1 opacity-60"; m.textContent = meta; wait.appendChild(m); }

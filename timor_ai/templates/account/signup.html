@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+{% block title %}Daftar – LAFEX-AI{% endblock %}
+{% block body %}
+<main class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow p-6 space-y-4">
+    <h1 class="text-2xl font-bold text-center">Daftar akun</h1>
+    <p class="text-center text-sm text-slate-500">Dapat poin gratis untuk mencoba.</p>
+
+    {% if FACEBOOK_ENABLED %}
+    <form method="post" action="{% provider_login_url 'facebook' process='login' %}">
+      {% csrf_token %}
+      <button class="w-full bg-[#1877f2] hover:bg-[#1468d6] text-white rounded-lg py-2 font-medium">Daftar dengan Facebook</button>
+    </form>
+    <div class="flex items-center gap-2 text-xs text-slate-400"><span class="flex-1 border-t"></span>atau pakai email<span class="flex-1 border-t"></span></div>
+    {% endif %}
+
+    <form method="post" action="{% url 'account_signup' %}" class="space-y-3">
+      {% csrf_token %}
+      {% for e in form.non_field_errors %}<p class="text-sm text-red-600">{{ e }}</p>{% endfor %}
+      <div><label class="block text-sm mb-1" for="id_email">Email</label>
+        <input id="id_email" name="email" type="email" required autocomplete="email" class="w-full border rounded-lg px-3 py-2" value="{{ form.email.value|default:'' }}">
+        {% for e in form.email.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+      <div><label class="block text-sm mb-1" for="id_password1">Password</label>
+        <input id="id_password1" name="password1" type="password" required autocomplete="new-password" class="w-full border rounded-lg px-3 py-2">
+        {% for e in form.password1.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+      <div><label class="block text-sm mb-1" for="id_password2">Ulangi password</label>
+        <input id="id_password2" name="password2" type="password" required autocomplete="new-password" class="w-full border rounded-lg px-3 py-2">
+        {% for e in form.password2.errors %}<p class="text-xs text-red-600">{{ e }}</p>{% endfor %}</div>
+      {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+      <button class="w-full bg-red-700 hover:bg-red-800 text-white rounded-lg py-2 font-medium">Daftar</button>
+    </form>
+    <p class="text-sm text-center"><a class="text-red-700 underline" href="{% url 'account_login' %}">Sudah punya akun? Masuk</a></p>
+  </div>
+</main>
+{% endblock %}
