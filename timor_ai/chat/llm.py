@@ -39,10 +39,12 @@ def _load():
         logger.info("Memuat model %s ...", cfg["LLM_MODEL_ID"])
         tokenizer = AutoTokenizer.from_pretrained(cfg["LLM_MODEL_ID"], token=token)
         use_cuda = torch.cuda.is_available()
+        # bfloat16 = ~5 GB RAM untuk Gemma 2 2B (float32 butuh ~10 GB). Gemma 2 sebaiknya tidak pakai float16.
+        dtype = getattr(torch, cfg["LLM_DTYPE"], torch.bfloat16)
         model = AutoModelForCausalLM.from_pretrained(
             cfg["LLM_MODEL_ID"],
             token=token,
-            torch_dtype=torch.bfloat16 if use_cuda else torch.float32,
+            torch_dtype=dtype,
             device_map="auto" if use_cuda else None,
         )
         if cfg["LLM_LORA_PATH"]:
