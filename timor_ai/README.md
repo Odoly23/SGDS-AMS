@@ -18,7 +18,7 @@ model open-source kecil (**Gemma 2 2B/9B**), ditambah **LoRA** (belajar bahasa l
         │  Django Template + Tailwind (chat.html, JS fetch)
         ▼
  ┌──────────────────────── Django 5 + DRF ────────────────────────┐
- │  core/      settings, urls, signup/login (Django Auth)         │
+ │  core/      settings, urls, login email + Facebook (allauth)   │
  │  chat/      API: /api/chat/  /api/detect/  /api/languages/ ...  │
  │             ├─ detect.py   auto-detect bahasa (Tetun manual +   │
  │             │              langdetect untuk pt/en/id)           │
@@ -49,12 +49,12 @@ timor_ai/
 ├── requirements.txt          # web + RAG
 ├── requirements-ai.txt       # torch/transformers/peft (berat)
 ├── .env.example
-├── core/                     # settings.py, urls.py, views.py (signup)
+├── core/                     # settings.py, urls.py, context_processors.py
 ├── chat/                     # models, views, urls, serializers, services, llm, detect, prompts, admin
 ├── datasets/                 # models, admin (crowdsourcing), management/commands, seed/
 ├── rag/                      # models, admin (upload PDF/TXT), services (chunk/embed/search)
 ├── billing/                  # poin prabayar, paket, voucher (ala pulsa), admin laporan
-├── templates/                # base.html, chat/chat.html, registration/{login,signup}.html
+├── templates/                # base.html, chat/chat.html, account/{login,signup}.html
 ├── training/finetune_lora.py # LoRA
 └── evaluation/eval_language.py
 ```
