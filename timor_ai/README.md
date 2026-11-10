@@ -51,7 +51,7 @@ timor_ai/
 ├── .env.example
 ├── core/                     # settings.py, urls.py, context_processors.py
 ├── chat/                     # models, views, urls, serializers, services, llm, detect, prompts, admin
-├── datasets/                 # models, admin (crowdsourcing), management/commands, seed/
+├── datasets/                 # models (Phrase, Translation, Vote), services, halaman /kontribusi/, admin, seed/
 ├── rag/                      # models, admin (upload PDF/TXT), services (chunk/embed/search)
 ├── billing/                  # poin prabayar, paket, voucher (ala pulsa), admin laporan
 ├── templates/                # base.html, chat/chat.html, account/{login,signup}.html
@@ -339,3 +339,51 @@ Memakai **django-allauth**. User bisa daftar dengan **email + password** (wajib 
 ## 11. Bahasa daerah (Mambae, dll.) dan Inggris di model berbayar
 
 Pilihan bahasa jawaban (Tetun, Portugis, Inggris, Indonesia, atau bahasa daerah) dikirim ke model lewat instruksi sistem. **Inggris, Portugis, Indonesia** berjalan baik di model besar. **Tetun** cukup baik tetapi perlu dicek penutur asli. **Mambae dan bahasa daerah lain**: model besar pun belum pernah dilatih dengan data memadai, jadi ia bisa salah atau mengarang. Itu sebabnya aplikasi (1) memberi peringatan eksperimental, (2) memakai **contoh terverifikasi dari komunitas** sebagai petunjuk di prompt, dan (3) mengutamakan **memori terjemahan** untuk kalimat yang sudah ada. Kualitas Mambae akan naik sebanding dengan jumlah kalimat terverifikasi (bagian 7), bukan dengan model yang lebih mahal.
+
+
+---
+
+## 12. Model dari nol, atau crowdsourcing? (jawaban lengkap)
+
+**Melatih model bicara dari nol tidak realistis untuk Mambae/Makasae dkk.**
+- Model bahasa belajar dari **miliaran sampai triliunan kata**. Gemma 2 2B dilatih dengan sekitar 2 triliun token. Untuk Mambae, data tertulis yang ada mungkin hanya ribuan kalimat (angka ini perkiraan saya, bukan hasil pengukuran). Model yang dilatih dari nol dengan data sebanyak itu akan menghasilkan teks acak.
+- Biaya komputasi kasar untuk satu model 2B dari nol: puluhan ribu jam GPU kelas A100, ratusan ribu dolar. Itu pun hanya jika datanya ada.
+- Jadi yang menentukan bukan "model dari nol atau tidak", melainkan **berapa banyak kalimat terverifikasi yang berhasil dikumpulkan**. Data itulah yang dipakai di semua jalur: contoh di prompt, memori terjemahan, LoRA, atau nanti model terjemahan khusus.
+
+**Jalur bertahap yang masuk akal** (setiap tahap memakai data dari tahap sebelumnya):
+| Jumlah kalimat terverifikasi per bahasa | Yang bisa dilakukan |
+|---|---|
+| 0 - 500 | Memori terjemahan + contoh di prompt (sudah ada). Cukup untuk sapaan dan frasa dasar. |
+| 500 - 5.000 | LoRA pada Gemma (`export_finetune`), atau fine-tune model terjemahan yang sudah ada untuk bahasa mirip. Pola kalimat sederhana mulai benar. |
+| 5.000+ | Model terjemahan khusus per bahasa; evaluasi resmi dengan penutur asli. Suara (pengenalan/pembuatan ucapan) adalah proyek terpisah yang butuh rekaman audio, bukan hanya teks. |
+
+Batas angka di tabel adalah patokan kasar untuk perencanaan, bukan jaminan kualitas.
+
+### Halaman crowdsourcing untuk user: `/kontribusi/`
+Sudah ada di aplikasi (tautan "Bantu bahasa daerah" di menu samping chat). Tiga tab:
+1. **Terjemahkan:** user memilih bahasa yang dikuasai, lalu melihat kalimat dalam Tetun/Indonesia/Portugis/Inggris dan menulis terjemahannya (+ dialek, mis. Ainaro). Kalimat yang belum punya terjemahan di bahasa itu didahulukan.
+2. **Periksa:** user melihat terjemahan orang lain dan menekan *Benar* / *Salah*. Draf buatan AI dari seeder juga diperiksa di sini.
+3. **Papan skor:** peringkat berdasarkan jumlah terjemahan terverifikasi, memakai nama samaran ("Kontributor #12"), email tidak ditampilkan.
+
+**Jaminan kualitas (penting):**
+- Kiriman user berstatus *draft* dan **tidak dipakai untuk apa pun** sampai diverifikasi.
+- 3 suara *Benar* hanya mendorong terjemahan ke **antrean reviewer**. Suara komunitas tidak pernah memverifikasi sendiri, jadi akun palsu tidak bisa mengisi data sampah ke model.
+- **Reviewer** (penutur asli/ahli, grup "Reviewer") memutuskan di Admin > Terjemahan. Kolom *Suara* menunjukkan setuju/tidak, filter status *Menunggu review*, aksi *Tandai terverifikasi* / *Tolak*.
+- Batas harian: 40 kiriman dan 100 pemeriksaan per user (`CONTRIB_MAX_*` di `.env`). Terjemahan ganda ditolak. User tidak bisa memeriksa tulisan sendiri.
+- Pengisi menyatakan sendiri bahasa yang dikuasai, **tidak ada pembuktian**. Itulah gunanya langkah reviewer.
+
+**Hadiah poin (mengikat ke sistem poin):**
+| Kejadian | Hadiah |
+|---|---|
+| Terjemahan Anda **terverifikasi** reviewer | +50 poin (`CONTRIB_REWARD_VERIFIED`) |
+| Anda memilih *Benar* dan terjemahan itu akhirnya terverifikasi | +2 poin (`CONTRIB_REWARD_VOTE`) |
+Hadiah dibayar sekali per terjemahan dan hanya setelah reviewer manusia memverifikasi. Reviewer tidak mendapat hadiah dari verifikasi tulisannya sendiri. Hadiah adalah biaya Anda: 50 poin setara kira-kira 1-2 jawaban jika memakai model mahal, atau puluhan jawaban jika memakai model murah (bagian 9). Sesuaikan angkanya.
+
+**Cara memulai di lapangan:**
+1. `python manage.py setup_groups`, lalu jadikan 2-3 orang yang Anda percaya (guru bahasa, dosen UNTL, tokoh komunitas) sebagai **Reviewer** (Admin > Users: centang *Staff status* + grup Reviewer).
+2. Mulai dari **satu bahasa** (mis. Mambae atau Makasae, penutur terbanyak) dan 100 kalimat seed. Target mingguan, mis. 50 kalimat terverifikasi.
+3. Undang kontributor lewat sekolah, paroki, radio komunitas, grup WhatsApp/Facebook. Kontributor tidak perlu staf Admin; cukup daftar akun biasa.
+4. Pantau Admin > Terjemahan (filter bahasa/status) dan laporan poin di Admin > Transaksi poin (jenis *Hadiah kontribusi*).
+5. Bila 500+ kalimat terverifikasi: `export_finetune` lalu latih LoRA (bagian 5B) dan bandingkan skor sebelum/sesudah.
+
+**Belum ada:** rekaman suara/audio, pembuktian identitas penutur, notifikasi ke reviewer, dan penambahan kalimat baru oleh user biasa (kalimat baru ditambah admin lewat Admin > Kalimat atau impor CSV). Saya bisa menambahkannya bertahap.

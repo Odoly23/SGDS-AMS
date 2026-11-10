@@ -63,6 +63,7 @@ class Translation(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="reviewed_translations",
     )
+    rewarded = models.BooleanField(default=False, editable=False, help_text="Hadiah poin sudah dibayarkan (hanya sekali)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -75,3 +76,19 @@ class Translation(models.Model):
 
     def __str__(self):
         return f"[{self.language.code}] {self.text[:40]}"
+
+
+class Vote(models.Model):
+    """Suara komunitas: "terjemahan ini benar" / "salah". Suara hanya mendorong ke antrean reviewer, tidak memverifikasi."""
+    translation = models.ForeignKey(Translation, on_delete=models.CASCADE, related_name="votes")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="translation_votes")
+    agree = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["translation", "user"], name="one_vote_per_user")]
+        verbose_name = "Suara"
+        verbose_name_plural = "Suara"
+
+    def __str__(self):
+        return f"{'setuju' if self.agree else 'tidak'} - {self.translation_id}"

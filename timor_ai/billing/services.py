@@ -51,6 +51,11 @@ def add_credits_manual(user, amount: int, note: str = "") -> int:
     return _apply(get_wallet(user).pk, amount, CreditTransaction.Kind.MANUAL, note or "Penyesuaian admin")
 
 
+def grant_reward(user, amount: int, note: str = "") -> int:
+    """Hadiah poin untuk kontributor/pemeriksa bahasa."""
+    return _apply(get_wallet(user).pk, amount, CreditTransaction.Kind.REWARD, note)
+
+
 def can_chat(user) -> bool:
     return get_wallet(user).balance >= settings.BILLING["MIN_BALANCE_TO_CHAT"]
 

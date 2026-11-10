@@ -75,6 +75,7 @@ class CreditTransaction(models.Model):
         VOUCHER = "voucher", "Isi ulang voucher"
         MANUAL = "manual", "Penyesuaian admin"
         USAGE = "usage", "Pemakaian chat"
+        REWARD = "reward", "Hadiah kontribusi bahasa"
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
     kind = models.CharField(max_length=10, choices=Kind.choices)

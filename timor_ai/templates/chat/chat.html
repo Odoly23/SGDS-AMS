@@ -17,6 +17,7 @@
         <button class="rounded bg-orange-400 hover:bg-orange-300 text-slate-900 px-2 font-medium">Isi</button>
       </form>
       <p id="redeemMsg" class="min-h-4"></p>
+      <a href="{% url 'contribute-page' %}" class="block rounded bg-slate-700 hover:bg-slate-600 px-2 py-2 text-center">Bantu bahasa daerah (dapat poin)</a>
       <div class="truncate">{{ user.email|default:user.username }}</div>
       {% if user.is_staff %}<a class="underline" href="{% url 'admin:index' %}">Admin</a> · {% endif %}
       <form method="post" action="{% url 'account_logout' %}" class="inline">{% csrf_token %}<button class="underline">Keluar</button></form>

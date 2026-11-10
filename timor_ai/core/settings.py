@@ -184,3 +184,13 @@ BILLING = {
     "TRIAL_CREDITS": int(os.getenv("TRIAL_CREDITS", "100")),         # poin gratis untuk user baru (biaya Anda!)
     "MAX_MESSAGES_PER_MINUTE": int(os.getenv("MAX_MESSAGES_PER_MINUTE", "10")),
 }
+
+# ---------- Crowdsourcing bahasa daerah ----------
+# Hadiah dibayar HANYA setelah reviewer manusia memverifikasi terjemahan (bukan saat mengirim / memberi suara).
+CONTRIB = {
+    "REWARD_VERIFIED": int(os.getenv("CONTRIB_REWARD_VERIFIED", "50")),   # poin untuk penulis terjemahan terverifikasi
+    "REWARD_VOTE": int(os.getenv("CONTRIB_REWARD_VOTE", "2")),            # poin untuk pemeriksa yang suaranya "benar" dan akhirnya terverifikasi
+    "MAX_SUBMISSIONS_PER_DAY": int(os.getenv("CONTRIB_MAX_SUBMISSIONS_PER_DAY", "40")),
+    "MAX_VOTES_PER_DAY": int(os.getenv("CONTRIB_MAX_VOTES_PER_DAY", "100")),
+    "VOTES_TO_REVIEW": 3,   # jumlah suara setuju agar naik ke antrean reviewer
+}
