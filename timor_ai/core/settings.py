@@ -110,6 +110,7 @@ LAFEX_AI = {
     "LLM_MODEL_ID": os.getenv("LLM_MODEL_ID", "google/gemma-2-2b-it"),
     "LLM_LORA_PATH": os.getenv("LLM_LORA_PATH", ""),             # folder adapter LoRA hasil training
     "HF_TOKEN": os.getenv("HF_TOKEN", ""),
+    "LLM_DTYPE": os.getenv("LLM_DTYPE", "bfloat16"),             # bfloat16 | float16 | float32
     "MAX_NEW_TOKENS": int(os.getenv("LLM_MAX_NEW_TOKENS", "300")),
     "EMBEDDING_BACKEND": os.getenv("EMBEDDING_BACKEND", "hash"),  # hash | sentence-transformers
     "EMBEDDING_MODEL_ID": os.getenv("EMBEDDING_MODEL_ID", "intfloat/multilingual-e5-small"),

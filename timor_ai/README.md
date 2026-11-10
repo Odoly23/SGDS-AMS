@@ -146,12 +146,50 @@ Tes otomatis: `python manage.py test` · Evaluasi bahasa: `python evaluation/eva
 
 ---
 
-## 5. Mengaktifkan model AI sungguhan
+## 5. Mengaktifkan Gemma 2 2B (langkah demi langkah)
 
-1. Daftar di huggingface.co, buka halaman `google/gemma-2-2b-it`, setujui lisensinya, buat **access token**.
-2. `pip install torch --index-url https://download.pytorch.org/whl/cpu` (atau versi GPU), lalu `pip install -r requirements-ai.txt`.
-3. `.env`: `LLM_BACKEND=hf`, `HF_TOKEN=...`, `EMBEDDING_BACKEND=sentence-transformers`, lalu `python manage.py reindex_rag`.
-4. Kebutuhan kasar: **2B** ≈ 6–8 GB RAM (CPU, lambat ~beberapa detik/kata) atau GPU 8 GB. **9B** butuh GPU ≥ 24 GB atau kuantisasi 4-bit. VPS murah tanpa GPU: pakai 2B.
+**A. Akun & token Hugging Face (sekali saja, harus Anda lakukan sendiri)**
+1. Daftar di https://huggingface.co lalu login.
+2. Buka https://huggingface.co/google/gemma-2-2b-it → klik **Acknowledge license** (Gemma modelnya "gated"; tanpa ini unduhan ditolak).
+3. Buat token tipe **Read** di https://huggingface.co/settings/tokens. Simpan; jangan dibagikan atau di-commit.
+
+**B. Pasang paket AI** (di dalam venv). Pasang torch dulu:
+```bash
+# Tanpa GPU (Linux Mint / Windows):
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Punya GPU NVIDIA: ikuti perintah di https://pytorch.org/get-started/locally/
+pip install -r requirements-ai.txt
+```
+
+**C. Edit `.env`**
+```
+LLM_BACKEND=hf
+HF_TOKEN=hf_xxxxxxxxxxxxxxxx
+LLM_DTYPE=bfloat16
+EMBEDDING_BACKEND=sentence-transformers
+```
+Lalu indeks ulang dokumen RAG (vektor lama dari `hash` tidak cocok): `python manage.py reindex_rag`
+
+**D. Periksa kesiapan** — perintah ini memeriksa token, lisensi, RAM/GPU, lalu mencoba satu jawaban:
+```bash
+python manage.py check_llm --skip-generate   # cek cepat, tanpa unduh model
+python manage.py check_llm                   # + unduh model (~5 GB) dan tes jawab
+```
+Setiap `[GAGAL]` disertai petunjuk perbaikannya. Setelah lolos: `python manage.py runserver` dan coba chat.
+
+**Kebutuhan kasar & ekspektasi**
+- **2B (bfloat16):** RAM bebas ≥ 6 GB di CPU (lambat, ±beberapa detik per kata) atau GPU ≥ 6 GB. Jika CPU Anda lama dan error/sangat lambat, coba `LLM_DTYPE=float32` (butuh ±11 GB RAM).
+- Unduhan pertama ±5 GB, tersimpan di cache Hugging Face untuk seterusnya.
+- **9B:** ganti `LLM_MODEL_ID=google/gemma-2-9b-it`; butuh GPU ≥ 24 GB atau kuantisasi 4-bit.
+- Tetun & bahasa lokal masih lemah sebelum LoRA (bagian di bawah) — itu wajar.
+
+**Masalah umum**
+| Pesan | Penyebab / solusi |
+|---|---|
+| `GatedRepoError` / 401 / 403 | Lisensi belum di-acknowledge atau token salah (langkah A) |
+| `MemoryError` / proses "Killed" | RAM kurang → tutup aplikasi lain, atau pakai GPU / model lebih kecil |
+| Sangat lambat | Normal di CPU; kurangi `LLM_MAX_NEW_TOKENS` (mis. 150) |
+| Chat pertama lama | Model dimuat saat permintaan pertama (hanya sekali per proses server) |
 
 ### LoRA (belajar bahasa lokal)
 ```bash
