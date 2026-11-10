@@ -1,0 +1,16 @@
+# ============ LAFEX-AI : requirements dasar (web + RAG) ============
+# Install:  pip install -r requirements.txt
+# Untuk model LLM / LoRA (berat, butuh torch): pip install -r requirements-ai.txt
+
+Django>=5.0,<5.3
+djangorestframework>=3.15
+psycopg[binary]>=3.1        # driver PostgreSQL (aman di Windows & Linux)
+python-dotenv>=1.0          # baca file .env
+
+# --- RAG ---
+pypdf>=4.0                  # ekstrak teks dari PDF
+numpy>=1.26                 # hitung kemiripan vektor
+sentence-transformers>=3.0  # model embedding multibahasa (butuh torch, lihat requirements-ai.txt)
+
+# --- Deteksi bahasa ---
+langdetect>=1.0.9           # untuk Portugis / Inggris / Indonesia (Tetum ditangani manual)

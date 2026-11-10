@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}LAFEX-AI – Chat{% endblock %}
+{% block body %}
+<div class="h-screen flex overflow-hidden">
+
+  <!-- Sidebar riwayat (disembunyikan di HP, dibuka lewat tombol ☰) -->
+  <aside id="sidebar" class="hidden md:flex md:w-64 flex-col bg-slate-900 text-slate-100 w-64 absolute md:static inset-y-0 left-0 z-20">
+    <div class="p-3 flex gap-2">
+      <button id="newChat" class="flex-1 bg-red-700 hover:bg-red-800 rounded-lg py-2 text-sm font-medium">+ Chat baru</button>
+    </div>
+    <ul id="convList" class="flex-1 overflow-y-auto px-2 space-y-1 text-sm"></ul>
+    <div class="p-3 border-t border-slate-700 text-xs space-y-1">
+      <div>{{ user.username }}</div>
+      {% if user.is_staff %}<a class="underline" href="{% url 'admin:index' %}">Admin</a> · {% endif %}
+      <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="underline">Keluar</button></form>
+    </div>
+  </aside>
+
+  <!-- Area utama -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <header class="bg-white border-b px-3 py-2 flex flex-wrap items-center gap-2">
+      <button id="menuBtn" class="md:hidden px-2 py-1 border rounded">☰</button>
+      <strong class="text-red-700">LAFEX-AI</strong>
+
+      <select id="mode" class="border rounded-lg px-2 py-1 text-sm">
+        <option value="chat">💬 Tanya jawab</option>
+        <option value="translate">🔁 Terjemahan</option>
+      </select>
+
+      <span id="srcWrap" class="hidden items-center gap-1 text-sm">
+        Dari:
+        <select id="srcLang" class="border rounded-lg px-2 py-1 text-sm"></select>
+      </span>
+
+      <label class="flex items-center gap-1 text-sm">
+        <span id="langLabel">Jawab dalam:</span>
+        <select id="lang" class="border rounded-lg px-2 py-1 text-sm"></select>
+      </label>
+    </header>
+
+    <section id="messages" class="flex-1 overflow-y-auto p-3 md:p-6 space-y-3">
+      <div class="text-center text-slate-500 text-sm mt-10">
+        Bondia! · Bom dia! · Hello! · Selamat pagi!<br>Pilih bahasa di atas lalu mulai bertanya.
+      </div>
+    </section>
+
+    <footer class="bg-white border-t p-3">
+      <p id="detectHint" class="text-xs text-slate-500 h-4 mb-1"></p>
+      <form id="chatForm" class="flex gap-2">
+        <textarea id="input" rows="1" maxlength="4000" required placeholder="Hakerek iha ne'e… / Escreva aqui… / Type here…"
+                  class="flex-1 border rounded-xl px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"></textarea>
+        <button id="sendBtn" class="bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white rounded-xl px-4 font-medium">Kirim</button>
+      </form>
+    </footer>
+  </main>
+</div>
+
+<script>
+// ---------- util ----------
+const $ = (id) => document.getElementById(id);
+const csrf = () => document.cookie.split("; ").find(c => c.startsWith("csrftoken="))?.split("=")[1] || "{{ csrf_token }}";
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()},
+    credentials: "same-origin", ...opts,
+  });
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+}
+
+let languages = [], conversationId = null;
+
+// ---------- pilihan bahasa ----------
+function fillLangSelect(sel, withAuto) {
+  sel.innerHTML = "";
+  if (withAuto) sel.add(new Option("🔎 Otomatis (deteksi)", "auto"));
+  const groups = {
+    "Bahasa utama": languages.filter(l => ["official", "working"].includes(l.kind)),
+    "Bahasa lokal": languages.filter(l => !["official", "working"].includes(l.kind)),
+  };
+  for (const [label, items] of Object.entries(groups)) {
+    const og = document.createElement("optgroup"); og.label = label;
+    items.forEach(l => og.appendChild(new Option(l.name + (l.verification === "verify" ? " (?)" : ""), l.code)));
+    sel.appendChild(og);
+  }
+}
+async function init() {
+  languages = await api("/api/languages/");
+  fillLangSelect($("lang"), true);   // chat: boleh "Otomatis" (ikuti bahasa user)
+  fillLangSelect($("srcLang"), true);
+  $("lang").value = "tet";
+  await loadConversations();
+}
+
+// ---------- mode ----------
+$("mode").addEventListener("change", () => {
+  const t = $("mode").value === "translate";
+  $("srcWrap").classList.toggle("hidden", !t); $("srcWrap").classList.toggle("flex", t);
+  $("langLabel").textContent = t ? "Ke:" : "Jawab dalam:";
+});
+$("menuBtn").onclick = () => $("sidebar").classList.toggle("hidden");
+
+// ---------- tampilan pesan (pakai textContent -> aman dari XSS) ----------
+function addBubble(role, text, meta) {
+  const wrap = document.createElement("div");
+  wrap.className = "flex " + (role === "user" ? "justify-end" : "justify-start");
+  const b = document.createElement("div");
+  b.className = "max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2 whitespace-pre-wrap break-words " +
+    (role === "user" ? "bg-red-700 text-white" : "bg-white border");
+  b.textContent = text;
+  if (meta) { const m = document.createElement("div"); m.className = "text-xs mt-1 opacity-60"; m.textContent = meta; b.appendChild(m); }
+  wrap.appendChild(b); $("messages").appendChild(wrap);
+  $("messages").scrollTop = $("messages").scrollHeight;
+  return b;
+}
+const sourcesMeta = (r) => (r.sources && r.sources.length) ? "Sumber: " + [...new Set(r.sources.map(s => s.title))].join("; ") : "";
+
+// ---------- deteksi saat mengetik ----------
+let detTimer;
+$("input").addEventListener("input", () => {
+  clearTimeout(detTimer);
+  detTimer = setTimeout(async () => {
+    const text = $("input").value.trim();
+    if (text.length < 4) { $("detectHint").textContent = ""; return; }
+    try {
+      const d = await api("/api/detect/", {method: "POST", body: JSON.stringify({text})});
+      $("detectHint").textContent = d.name ? `Terdeteksi: ${d.name}` : "Bahasa tidak terdeteksi (bahasa lokal harus dipilih manual)";
+    } catch (e) { /* abaikan */ }
+  }, 500);
+});
+
+// ---------- kirim ----------
+$("chatForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("input").value.trim(); if (!text) return;
+  const mode = $("mode").value;
+  let lang = $("lang").value, src = $("srcLang").value;
+  if (mode === "translate" && src === "auto") src = null;
+  if (lang === "auto") {
+    if (mode === "translate") { alert("Pilih bahasa tujuan terjemahan."); return; }
+    // mode chat "otomatis": jawab dalam bahasa yang terdeteksi dari pesan user (default Tetun)
+    try { lang = (await api("/api/detect/", {method: "POST", body: JSON.stringify({text})})).code || "tet"; }
+    catch (e) { lang = "tet"; }
+  }
+
+  addBubble("user", text); $("input").value = ""; $("detectHint").textContent = "";
+  const wait = addBubble("assistant", "…"); $("sendBtn").disabled = true;
+  try {
+    const body = {message: text, language: lang, mode, conversation_id: conversationId};
+    if (mode === "translate" && src) body.source_language = src;
+    const data = await api("/api/chat/", {method: "POST", body: JSON.stringify(body)});
+    conversationId = data.conversation_id;
+    wait.textContent = data.reply.content;
+    const meta = sourcesMeta(data.reply);
+    if (meta) { const m = document.createElement("div"); m.className = "text-xs mt-1 opacity-60"; m.textContent = meta; wait.appendChild(m); }
+    loadConversations();
+  } catch (err) { wait.textContent = "Error: " + err.message; }
+  $("sendBtn").disabled = false; $("input").focus();
+});
+$("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("chatForm").requestSubmit(); } });
+
+// ---------- riwayat ----------
+async function loadConversations() {
+  const list = await api("/api/conversations/");
+  $("convList").innerHTML = "";
+  list.forEach(c => {
+    const li = document.createElement("li");
+    li.className = "px-2 py-2 rounded hover:bg-slate-700 cursor-pointer truncate " + (c.id === conversationId ? "bg-slate-700" : "");
+    li.textContent = (c.mode === "translate" ? "🔁 " : "💬 ") + (c.title || "Tanpa judul");
+    li.onclick = () => openConversation(c.id);
+    $("convList").appendChild(li);
+  });
+}
+async function openConversation(id) {
+  const data = await api(`/api/conversations/${id}/`);
+  conversationId = id; $("messages").innerHTML = "";
+  data.messages.forEach(m => addBubble(m.role, m.content, m.role === "assistant" ? sourcesMeta(m) : ""));
+  $("mode").value = data.conversation.mode; $("mode").dispatchEvent(new Event("change"));
+  $("lang").value = data.conversation.language;
+  if (window.innerWidth < 768) $("sidebar").classList.add("hidden");
+  loadConversations();
+}
+$("newChat").onclick = () => { conversationId = null; $("messages").innerHTML = ""; loadConversations(); };
+
+init();
+</script>
+{% endblock %}

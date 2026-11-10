@@ -1,0 +1,11 @@
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+venv/
+.venv/
+media/
+training/output/
+training/*.jsonl
+timor_ai/db.sqlite3
+timor_ai/evaluation/results.csv
