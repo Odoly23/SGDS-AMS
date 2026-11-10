@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}LAFEX-AI{% endblock %}</title>
+  {# Tailwind lewat CDN: cukup untuk tahap awal. Untuk produksi, build Tailwind CLI. #}
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+  {% block body %}{% endblock %}
+</body>
+</html>

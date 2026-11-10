@@ -1,0 +1,14 @@
+# ============ Lapisan AI (LLM + LoRA) ============
+# Install torch dulu sesuai mesin Anda: https://pytorch.org/get-started/locally/
+#   CPU saja : pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   GPU NVIDIA: ikuti perintah di situs PyTorch
+-r requirements.txt
+transformers>=4.44
+accelerate>=0.33
+peft>=0.12            # LoRA
+bitsandbytes>=0.43; sys_platform == "linux"   # QLoRA 4-bit (hanya Linux + GPU NVIDIA)
+langchain>=0.2        # (opsional) kalau mau pakai chain / retriever langchain
+langchain-community>=0.2
+faiss-cpu>=1.8        # (opsional) alternatif pgvector/numpy untuk pencarian vektor
+# CATATAN: paket HuggingFace "datasets" SENGAJA tidak dipasang, karena namanya
+# bentrok dengan app Django kita "datasets/". Training memakai file JSONL biasa.

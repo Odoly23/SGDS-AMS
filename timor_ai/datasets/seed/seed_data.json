@@ -1,0 +1,1117 @@
+{
+ "meta": {
+  "version": 1,
+  "languages": [
+   "tet",
+   "por",
+   "eng",
+   "mambae",
+   "makasae"
+  ],
+  "status_note": "tet/por/eng = DRAFT buatan AI, perlu dicek penutur asli. mambae/makasae = KOSONG, diisi komunitas.",
+  "default_status": "draft",
+  "default_source": "seed-ai-draft"
+ },
+ "phrases": [
+  {
+   "code": "greeting-001",
+   "category": "greeting",
+   "translations": {
+    "tet": "Bondia!",
+    "por": "Bom dia!",
+    "eng": "Good morning!",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-002",
+   "category": "greeting",
+   "translations": {
+    "tet": "Botarde!",
+    "por": "Boa tarde!",
+    "eng": "Good afternoon!",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-003",
+   "category": "greeting",
+   "translations": {
+    "tet": "Bonoite!",
+    "por": "Boa noite!",
+    "eng": "Good evening!",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-004",
+   "category": "greeting",
+   "translations": {
+    "tet": "Diak ka lae?",
+    "por": "Tudo bem?",
+    "eng": "How are you?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-005",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ha'u diak.",
+    "por": "Estou bem.",
+    "eng": "I am fine.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-006",
+   "category": "greeting",
+   "translations": {
+    "tet": "Obrigadu.",
+    "por": "Obrigado.",
+    "eng": "Thank you.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-007",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ha'u nia naran Maria.",
+    "por": "O meu nome é Maria.",
+    "eng": "My name is Maria.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-008",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ita nia naran saida?",
+    "por": "Qual é o seu nome?",
+    "eng": "What is your name?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-009",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ha'u mai husi Dili.",
+    "por": "Venho de Díli.",
+    "eng": "I come from Dili.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-010",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ita hela iha ne'ebé?",
+    "por": "Onde mora?",
+    "eng": "Where do you live?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-011",
+   "category": "greeting",
+   "translations": {
+    "tet": "Kontente hasoru ita.",
+    "por": "Prazer em conhecê-lo.",
+    "eng": "Nice to meet you.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-012",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ita hasoru malu fali tan.",
+    "por": "Até logo.",
+    "eng": "See you later.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-013",
+   "category": "greeting",
+   "translations": {
+    "tet": "Deskulpa.",
+    "por": "Desculpe.",
+    "eng": "Sorry. / Excuse me.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-014",
+   "category": "greeting",
+   "translations": {
+    "tet": "Favór ida.",
+    "por": "Por favor.",
+    "eng": "Please.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-015",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ha'u la komprende.",
+    "por": "Não compreendo.",
+    "eng": "I do not understand.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-016",
+   "category": "greeting",
+   "translations": {
+    "tet": "Favór ida ko'alia neineik.",
+    "por": "Fale devagar, por favor.",
+    "eng": "Please speak slowly.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-017",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ita bele ko'alia Tetun?",
+    "por": "Pode falar Tetum?",
+    "eng": "Can you speak Tetun?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-018",
+   "category": "greeting",
+   "translations": {
+    "tet": "Parabéns!",
+    "por": "Parabéns!",
+    "eng": "Congratulations!",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-019",
+   "category": "greeting",
+   "translations": {
+    "tet": "Natál diak!",
+    "por": "Feliz Natal!",
+    "eng": "Merry Christmas!",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "greeting-020",
+   "category": "greeting",
+   "translations": {
+    "tet": "Ita bele ajuda ha'u?",
+    "por": "Pode ajudar-me?",
+    "eng": "Can you help me?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-001",
+   "category": "market",
+   "translations": {
+    "tet": "Ida ne'e hira?",
+    "por": "Quanto custa isto?",
+    "eng": "How much is this?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-002",
+   "category": "market",
+   "translations": {
+    "tet": "Ida ne'e karun liu.",
+    "por": "Isto é muito caro.",
+    "eng": "This is too expensive.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-003",
+   "category": "market",
+   "translations": {
+    "tet": "Bele fo diskontu?",
+    "por": "Pode fazer desconto?",
+    "eng": "Can you give a discount?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-004",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa paun.",
+    "por": "Quero comprar pão.",
+    "eng": "I want to buy bread.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-005",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa modo.",
+    "por": "Quero comprar legumes.",
+    "eng": "I want to buy vegetables.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-006",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa foos kilu rua.",
+    "por": "Quero comprar dois quilos de arroz.",
+    "eng": "I want to buy two kilos of rice.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-007",
+   "category": "market",
+   "translations": {
+    "tet": "Iha troka ka lae?",
+    "por": "Tem troco?",
+    "eng": "Do you have change?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-008",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u selu ho dolar.",
+    "por": "Pago em dólares.",
+    "eng": "I pay in dollars.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-009",
+   "category": "market",
+   "translations": {
+    "tet": "Ida ne'e baratu.",
+    "por": "Isto é barato.",
+    "eng": "This is cheap.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-010",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa ikan.",
+    "por": "Quero comprar peixe.",
+    "eng": "I want to buy fish.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-011",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa manu.",
+    "por": "Quero comprar galinha.",
+    "eng": "I want to buy chicken.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-012",
+   "category": "market",
+   "translations": {
+    "tet": "Ikan ne'e fresku ka lae?",
+    "por": "Este peixe é fresco?",
+    "eng": "Is this fish fresh?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-013",
+   "category": "market",
+   "translations": {
+    "tet": "Fo ida ba ha'u.",
+    "por": "Dê-me um.",
+    "eng": "Give me one.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-014",
+   "category": "market",
+   "translations": {
+    "tet": "Merkadu loke oras hira?",
+    "por": "A que horas abre o mercado?",
+    "eng": "What time does the market open?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-015",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u la iha osan ona.",
+    "por": "Já não tenho dinheiro.",
+    "eng": "I have no more money.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-016",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa ai-farina.",
+    "por": "Quero comprar mandioca.",
+    "eng": "I want to buy cassava.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-017",
+   "category": "market",
+   "translations": {
+    "tet": "Kafé ida hira?",
+    "por": "Quanto custa um café?",
+    "eng": "How much is a coffee?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-018",
+   "category": "market",
+   "translations": {
+    "tet": "Ha'u hakarak sosa hahán.",
+    "por": "Quero comprar comida.",
+    "eng": "I want to buy food.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-019",
+   "category": "market",
+   "translations": {
+    "tet": "Hira ida-ida?",
+    "por": "Quanto é cada um?",
+    "eng": "How much is each one?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "market-020",
+   "category": "market",
+   "translations": {
+    "tet": "Obrigadu, ha'u sei mai fali.",
+    "por": "Obrigado, volto mais tarde.",
+    "eng": "Thank you, I will come back later.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-001",
+   "category": "family",
+   "translations": {
+    "tet": "Ne'e ha'u nia inan.",
+    "por": "Esta é a minha mãe.",
+    "eng": "This is my mother.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-002",
+   "category": "family",
+   "translations": {
+    "tet": "Ne'e ha'u nia aman.",
+    "por": "Este é o meu pai.",
+    "eng": "This is my father.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-003",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u iha maun ida.",
+    "por": "Tenho um irmão mais velho.",
+    "eng": "I have one older brother.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-004",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u iha biin ida.",
+    "por": "Tenho uma irmã mais velha.",
+    "eng": "I have one older sister.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-005",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u iha alin rua.",
+    "por": "Tenho dois irmãos mais novos.",
+    "eng": "I have two younger siblings.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-006",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u nia avó hela iha foho.",
+    "por": "A minha avó vive na montanha.",
+    "eng": "My grandmother lives in the mountains.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-007",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u nia família boot.",
+    "por": "A minha família é grande.",
+    "eng": "My family is big.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-008",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u kaben ona.",
+    "por": "Sou casado.",
+    "eng": "I am married.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-009",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u iha oan mane ida.",
+    "por": "Tenho um filho.",
+    "eng": "I have a son.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-010",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u iha oan feto ida.",
+    "por": "Tenho uma filha.",
+    "eng": "I have a daughter.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-011",
+   "category": "family",
+   "translations": {
+    "tet": "Ita nia família iha ema hira?",
+    "por": "Quantas pessoas há na sua família?",
+    "eng": "How many people are in your family?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-012",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u nia tiu hela iha Baucau.",
+    "por": "O meu tio vive em Baucau.",
+    "eng": "My uncle lives in Baucau.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-013",
+   "category": "family",
+   "translations": {
+    "tet": "Ne'e ha'u nia belun diak.",
+    "por": "Este é o meu bom amigo.",
+    "eng": "This is my good friend.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-014",
+   "category": "family",
+   "translations": {
+    "tet": "Ami han hamutuk iha uma.",
+    "por": "Comemos juntos em casa.",
+    "eng": "We eat together at home.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-015",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u nia inan tein hahán.",
+    "por": "A minha mãe cozinha.",
+    "eng": "My mother cooks.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-016",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u nia aman serbisu iha to'os.",
+    "por": "O meu pai trabalha no campo.",
+    "eng": "My father works in the field.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-017",
+   "category": "family",
+   "translations": {
+    "tet": "Labarik sira brinka iha liur.",
+    "por": "As crianças brincam lá fora.",
+    "eng": "The children play outside.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-018",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u ba vizita ha'u nia família iha knua.",
+    "por": "Vou visitar a minha família na aldeia.",
+    "eng": "I am going to visit my family in the village.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-019",
+   "category": "family",
+   "translations": {
+    "tet": "Ami selebra festa família.",
+    "por": "Celebramos uma festa de família.",
+    "eng": "We celebrate a family party.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "family-020",
+   "category": "family",
+   "translations": {
+    "tet": "Ha'u hadomi ha'u nia família.",
+    "por": "Amo a minha família.",
+    "eng": "I love my family.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-001",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u estuda iha eskola.",
+    "por": "Estudo na escola.",
+    "eng": "I study at school.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-002",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u nia profesór diak tebes.",
+    "por": "O meu professor é muito bom.",
+    "eng": "My teacher is very good.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-003",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u la hatene.",
+    "por": "Não sei.",
+    "eng": "I do not know.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-004",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u hakarak aprende Inglés.",
+    "por": "Quero aprender inglês.",
+    "eng": "I want to learn English.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-005",
+   "category": "school",
+   "translations": {
+    "tet": "Ita iha livru ka lae?",
+    "por": "Tem um livro?",
+    "eng": "Do you have a book?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-006",
+   "category": "school",
+   "translations": {
+    "tet": "Ohin iha teste matemátika.",
+    "por": "Hoje há teste de matemática.",
+    "eng": "Today there is a mathematics test.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-007",
+   "category": "school",
+   "translations": {
+    "tet": "Haree ba kuadru.",
+    "por": "Olhem para o quadro.",
+    "eng": "Look at the board.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-008",
+   "category": "school",
+   "translations": {
+    "tet": "Hakerek ita nia naran iha folha ne'e.",
+    "por": "Escreve o teu nome nesta folha.",
+    "eng": "Write your name on this sheet.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-009",
+   "category": "school",
+   "translations": {
+    "tet": "Lee livru ne'e.",
+    "por": "Lê este livro.",
+    "eng": "Read this book.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-010",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u halo ona tarefa.",
+    "por": "Fiz o trabalho de casa.",
+    "eng": "I did my homework.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-011",
+   "category": "school",
+   "translations": {
+    "tet": "Eskola hahú oras hira?",
+    "por": "A que horas começa a escola?",
+    "eng": "What time does school start?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-012",
+   "category": "school",
+   "translations": {
+    "tet": "Oras intervalu ona.",
+    "por": "É hora do intervalo.",
+    "eng": "It is break time.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-013",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u nia eskola besik ha'u nia uma.",
+    "por": "A minha escola fica perto de casa.",
+    "eng": "My school is near my house.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-014",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u hakarak sai profesór.",
+    "por": "Quero ser professor.",
+    "eng": "I want to become a teacher.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-015",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u estuda iha universidade.",
+    "por": "Estudo na universidade.",
+    "eng": "I study at university.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-016",
+   "category": "school",
+   "translations": {
+    "tet": "Ita nia klase iha ne'ebé?",
+    "por": "Onde é a sua sala de aula?",
+    "eng": "Where is your classroom?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-017",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u hetan nota diak.",
+    "por": "Tirei uma boa nota.",
+    "eng": "I got a good grade.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-018",
+   "category": "school",
+   "translations": {
+    "tet": "Labarik sira ba eskola loron-loron.",
+    "por": "As crianças vão à escola todos os dias.",
+    "eng": "The children go to school every day.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-019",
+   "category": "school",
+   "translations": {
+    "tet": "Favór ida, hatete fali.",
+    "por": "Por favor, repita.",
+    "eng": "Please repeat.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "school-020",
+   "category": "school",
+   "translations": {
+    "tet": "Ha'u presiza kaneta no kadernu.",
+    "por": "Preciso de caneta e caderno.",
+    "eng": "I need a pen and a notebook.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-001",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u moras.",
+    "por": "Estou doente.",
+    "eng": "I am sick.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-002",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u nia ulun moras.",
+    "por": "Dói-me a cabeça.",
+    "eng": "I have a headache.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-003",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u nia kabun moras.",
+    "por": "Dói-me a barriga.",
+    "eng": "I have a stomachache.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-004",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u nia isin manas.",
+    "por": "Tenho febre.",
+    "eng": "I have a fever.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-005",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u presiza ba klínika.",
+    "por": "Preciso de ir à clínica.",
+    "eng": "I need to go to the clinic.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-006",
+   "category": "health",
+   "translations": {
+    "tet": "Hospitál iha ne'ebé?",
+    "por": "Onde fica o hospital?",
+    "eng": "Where is the hospital?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-007",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u presiza doutór.",
+    "por": "Preciso de um médico.",
+    "eng": "I need a doctor.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-008",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u presiza aimoruk.",
+    "por": "Preciso de medicamento.",
+    "eng": "I need medicine.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-009",
+   "category": "health",
+   "translations": {
+    "tet": "Hemu bé barak.",
+    "por": "Beba muita água.",
+    "eng": "Drink a lot of water.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-010",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u iha alergia.",
+    "por": "Tenho alergia.",
+    "eng": "I have an allergy.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-011",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u isin-rua.",
+    "por": "Estou grávida.",
+    "eng": "I am pregnant.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-012",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u presiza vasina.",
+    "por": "Preciso de uma vacina.",
+    "eng": "I need a vaccine.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-013",
+   "category": "health",
+   "translations": {
+    "tet": "Fase liman ho sabaun.",
+    "por": "Lava as mãos com sabão.",
+    "eng": "Wash your hands with soap.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-014",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u la bele iis diak.",
+    "por": "Não consigo respirar bem.",
+    "eng": "I cannot breathe well.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-015",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u kanek.",
+    "por": "Estou ferido.",
+    "eng": "I am injured.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-016",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u nia nehan moras.",
+    "por": "Dói-me o dente.",
+    "eng": "I have a toothache.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-017",
+   "category": "health",
+   "translations": {
+    "tet": "Husi bainhira ita sente moras?",
+    "por": "Desde quando se sente doente?",
+    "eng": "Since when have you felt ill?",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-018",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u presiza ambulánsia.",
+    "por": "Preciso de uma ambulância.",
+    "eng": "I need an ambulance.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-019",
+   "category": "health",
+   "translations": {
+    "tet": "Ha'u sente di'ak liu ona.",
+    "por": "Já me sinto melhor.",
+    "eng": "I feel better now.",
+    "mambae": "",
+    "makasae": ""
+   }
+  },
+  {
+   "code": "health-020",
+   "category": "health",
+   "translations": {
+    "tet": "Han aimoruk ne'e dala tolu loron-loron.",
+    "por": "Tome este medicamento três vezes por dia.",
+    "eng": "Take this medicine three times a day.",
+    "mambae": "",
+    "makasae": ""
+   }
+  }
+ ]
+}
