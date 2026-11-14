@@ -94,4 +94,21 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v2"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v3"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+
+# ---------- Percakapan suara dengan AI (ai_chat) ----------
+# BACKEND: "dummy" = balasan contoh tanpa biaya (untuk mencoba/uji) | "anthropic" = model berbayar lewat API (Anda membayar per token).
+# Kunci API HANYA di server (.env), tidak pernah dikirim ke browser.
+AI = {
+	"BACKEND": os.getenv("AI_BACKEND", "dummy"),
+	"ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", ""),
+	"MODEL": os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5"),
+	"EFFORT": os.getenv("ANTHROPIC_EFFORT", "low"),                 # low = paling hemat; kosongkan bila model tidak mendukung
+	"MAX_TOKENS": int(os.getenv("ANTHROPIC_MAX_TOKENS", "1500")),   # termasuk token "berpikir"
+	"BATAS_HARI": int(os.getenv("AI_BATAS_HARI", "40")),            # giliran bicara per user per hari (melindungi biaya Anda)
+	"BATAS_HARI_TAMU": int(os.getenv("AI_BATAS_HARI_TAMU", "10")),  # akun tamu lebih sedikit
+	"BATAS_MENIT": 8,
+	"MAKS_TEKS": 500,
+	"RIWAYAT_GILIRAN": 6,                                           # berapa giliran terakhir dikirim sebagai konteks
+	"RIWAYAT_JAM": 6,                                               # konteks hanya dari 6 jam terakhir
+}

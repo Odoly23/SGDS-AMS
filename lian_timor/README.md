@@ -19,7 +19,7 @@ lian_timor/
 ├── users/                 Perfil (OneToOne ke User), daftar, "Kamu siapa?", akun, daftar utilizador   (auth_utils.py, forms.py)
 ├── belajar/               Kalimat, ProgresBelajar; halaman Belajar (level, kalimat 4 bahasa, dengar, rekam, progres); seed_level1
 ├── crowdsource/           RekamanSuara; halaman 'Ajuda AI' (pilih lian, estilu, rekam, kirim); validasi unggahan
-├── ai/                    ai_chat                            (menyusul)
+├── ai/                    Giliran; halaman Ko'alia ho AI (percakapan suara dengan lafaek); llm.py (dummy / API berbayar)
 └── report/                admin_dashboard (jumlah user, suara per bahasa, grafik batang)
 ```
 
@@ -96,6 +96,31 @@ Pilihan bahasa + gaya diingat untuk kunjungan berikutnya.
 **Pemeriksaan di server**: harus group kontributor/admin; file diperiksa dari **isinya** (tanda webm/ogg/wav/m4a/mp3), bukan dari nama; maks 2 MB; durasi minimal 0,8 detik; satu rekaman per kalimat+bahasa+gaya
 per pengirim; maks 10 per menit dan 100 per hari per user; nama berkas diacak. **Admin** mendengar, menyetujui/menolak, mengisi transkripsi, dan bisa mematikan pengirim nakal (Admin > Rekaman Lian).
 
+## Ko'alia ho AI (`/ai/`): bicara langsung dengan lafaek
+Seperti aplikasi latihan bicara: **tekan lafaek, bicara, AI menjawab dengan suara dan tulisan (Tetun + Inggris), lalu lafaek otomatis mendengarkan lagi** (tanpa mengetik).
+1. Pilih salah satu dari 3 karakter: **AI Preman**, **AI Sopan**, **AI Profesional**. Gaya bicaranya diambil dari teks `prompt_sistem` yang bisa diubah Admin (Admin > Karakter AI) tanpa menyentuh kode.
+2. **Lafaek** adalah tombol bicara. Ia berganti gambar: diam, **mendengarkan** (gelombang), **berpikir** (goyang), **berbicara** (mulut membuka-menutup selama suara AI).
+3. Setiap jawaban tampil sebagai gelembung: Tetun (besar) + terjemahan Inggris + kotak **Koresaun** bila kalimat Anda ada kesalahan bahasa. Tiap gelembung punya tombol dengar sendiri; tombol **Ulangi lian AI** mengulang jawaban terakhir.
+4. Menekan lafaek saat AI sedang bicara **memotong** AI dan langsung mendengarkan. **Para konversa** menghentikan semuanya. Mode "Ko'alia direta" bisa dimatikan.
+5. Kolom ketik selalu ada (cadangan bila browser tidak bisa mengenali suara). Pilih bahasa yang Anda ucapkan: Tetun / English / Português / Indonesia. Riwayat bisa dihapus user ("Hamoos istória").
+6. Materi menyesuaikan jawaban "Kamu siapa?" (anak sekolah, dewasa, guru, ibu di pasar).
+
+**Backend AI** (`.env`): `AI_BACKEND=dummy` (default; balasan contoh, ditandai MODE DEMO, gratis) atau `AI_BACKEND=anthropic` (model berbayar; Anda membayar per token).
+`ANTHROPIC_API_KEY` hanya di server. Pilih model lewat `ANTHROPIC_MODEL`: `claude-opus-5-5` (default, paling pintar), `claude-sonnet-5-5`, `claude-haiku-5-5` (paling murah).
+Kunci dan model diatur di `.env`; ke API hanya dikirim teks percakapan dan instruksi karakter, **tidak** nama/email/nomor HP user.
+
+**Pengaman biaya**: maks **40 giliran/hari** per user dan **10** untuk akun tamu (`AI_BATAS_HARI`, `AI_BATAS_HARI_TAMU`), maks 8 per menit, teks maks 500 karakter, konteks hanya 6 giliran terakhir.
+Giliran yang gagal tidak dicatat dan tidak mengurangi jatah. Dashboard Admin menampilkan **jumlah giliran dan token hari ini**. Atur juga batas pengeluaran bulanan di console API.
+Perkiraan kasar biaya per giliran (±900 token masuk + ±120 token keluar, belum termasuk token berpikir; **belum diukur dengan API sungguhan**): Opus 5.5 ≈ $0,006; Sonnet 5.5 ≈ $0,003; Haiku 5.5 ≈ $0,00015.
+
+### Batas teknis yang jujur (penting)
+- **Tidak ada pengenalan suara untuk Tetun** di browser. Saat memilih "Tetun", lafaek memakai mesin pengenal **Portugis sebagai perkiraan**: bisa salah dengar, terutama kata asli Tetun. Mengetik membantu, dan bahasa Inggris/Portugis/Indonesia dikenali jauh lebih baik. Pengenalan Tetun yang sungguhan butuh model khusus dan data suara (itulah gunanya halaman Ajuda AI).
+- **HP tidak punya suara Tetun.** Bagian Tetun dibacakan dengan **suara Portugis sebagai perkiraan** (pelafalan bisa kurang tepat); bagian Inggris dengan suara Inggris. Jika HP tidak punya suara bahasa itu, bagian itu tidak diucapkan (tetap tampil sebagai teks). Untuk pelajaran inti (Belajar), pakai rekaman penutur asli.
+- **Pengenalan suara dilakukan oleh browser**, dan Chrome/Edge/Safari bisa mengirim suara ke layanan vendornya (mis. Google). Kami tidak menyimpan suara; yang disimpan hanya teksnya. Ini dijelaskan di halaman.
+- Aplikasi **tidak menilai pelafalan**. Koreksi hanya untuk tata bahasa/kata dari teks hasil pengenalan.
+- Model bisa salah, termasuk dalam Tetun. Prompt menyuruhnya tidak mengarang kata, tetapi mohon dicek penutur asli sebelum dipakai umum.
+- Mikrofon dan pengenalan suara hanya jalan di **HTTPS atau localhost**. Firefox belum mendukung pengenalan suara (kolom ketik tetap bisa dipakai).
+
 ## Catatan keamanan & operasional
 - **Mikrofon hanya jalan di HTTPS atau localhost.** Untuk produksi wajib HTTPS.
 - Suara tersimpan di `media/rekaman_suara/`. Django hanya menyajikan `/media/` saat `DEBUG=1`. Di produksi sajikan lewat nginx **dengan akses terbatas untuk admin** (jangan publik): suara adalah data pengguna.
@@ -114,5 +139,5 @@ per pengirim; maks 10 per menit dan 100 per hari per user; nama berkas diacak. *
 | 20 kalimat Level 1 | Ada, tetapi **DRAF AI** (perlu dicek penutur asli) |
 | Level 2-5 (kalimat) | Belum ditulis |
 | Audio Tetun untuk kalimat | Belum (butuh rekaman penutur asli) |
-| `ai_chat.html` (3 karakter, rekam, jawab suara + teks) | Belum |
+| **`ai_chat.html`** (3 karakter, lafaek sebagai tombol bicara, jawab suara + teks Tetun/Inggris, koreksi, ulangi suara, mode langsung) | **Selesai** (uji E2E dengan pengganti suara; **belum diuji dengan model API sungguhan dan HP sungguhan**) |
 | Login Google/Facebook | Belum (butuh kunci dari akun Anda) |
