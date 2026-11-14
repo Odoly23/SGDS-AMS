@@ -1,0 +1,16 @@
+{% extends "main/layout.html" %}
+{% load static lian_tags %}
+{% block content %}
+<div class="main-content mx-auto text-center" style="max-width:440px">
+	<img class="maskot" src="{% static 'main/images/lafaek.svg' %}" alt="">
+	<h1 class="judul-halaman mt-0">{% t "menu_help" %}</h1>
+	<p class="mb-1">{% t "sub_help" %}</p>
+	<p class="text-muted small">
+		<span class="tx" data-l="tet">Grupu kontribuidór deit mak bele grava. Husu ba admin atu sai kontribuidór.</span>
+		<span class="tx" data-l="en">Only the contributor group can record. Ask the admin to make you a contributor.</span>
+		<span class="tx" data-l="pt">Só o grupo de contribuidores pode gravar. Pede ao administrador para te tornar contribuidor.</span>
+		<span class="tx" data-l="id">Hanya grup kontributor yang bisa merekam. Minta admin untuk menjadikan kamu kontributor.</span>
+	</p>
+	<a href="{% url 'home' %}" class="btn-lian kuning d-flex align-items-center justify-content-center" style="text-decoration:none">{% t "back_home" %}</a>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% load lian_tags %}
+		<ul class="nav-links">
+			<li class="{% if page == 'home' %}on{% endif %}"><a href="{% url 'home' %}"><i class="fa fa-home"></i> {% t "nav_home" %}</a></li>
+			<li class="{% if page == 'belajar' %}on{% endif %}"><a href="{% url 'belajar-list' %}"><i class="fa fa-book"></i> {% t "nav_learn" %}</a></li>
+			<li class="{% if page == 'ai' %}on{% endif %}"><a href="{% url 'ai-chat' %}"><i class="fa fa-comments"></i> {% t "nav_talk" %}</a></li>
+			<li class="{% if page == 'crowdsource' %}on{% endif %}"><a href="{% url 'crowdsource-home' %}"><i class="fa fa-microphone"></i> {% t "nav_help" %}</a></li>
+			<li class="{% if page == 'report' %}on{% endif %}"><a href="{% url 'report-dash' %}"><i class="fa fa-bar-chart"></i> {% t "nav_report" %}</a></li>
+			<li class="{% if page == 'users' %}on{% endif %}"><a href="{% url 'u-list' %}"><i class="fa fa-users"></i> {% t "nav_users" %}</a></li>
+			<li><a href="{% url 'admin:index' %}"><i class="fa fa-cogs"></i> {% t "nav_admin" %}</a></li>
+			<li class="nav-item dropdown">
+				<a class="dropdown-toggle" href="#" id="profile" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="fa fa-user-circle"></i> {{ request.user.username|upper|truncatechars:9 }}</a>
+				<div class="dropdown-menu dropdown-menu-right" aria-labelledby="profile">
+					<a class="dropdown-item" href="{% url 'user-account' %}"><i class="fa fa-user"></i> {% t "account_title" %}</a>
+					<div class="dropdown-divider"></div>
+					<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="dropdown-item" type="submit"><i class="fa fa-sign-out"></i> {% t "nav_logout" %}</button></form>
+				</div>
+			</li>
+		</ul>
+
+		<!-- Sidebar HP (lebar 72px: icon + label) -->
+		<div id="sidebar" aria-label="Menu">
+			<div class="sb-body">
+				<ul>
+					<li class="{% if page == 'home' %}sb-on{% endif %}"><a href="{% url 'home' %}"><i class="fa fa-home"></i>{% t "nav_home" %}</a></li>
+					<li class="{% if page == 'belajar' %}sb-on{% endif %}"><a href="{% url 'belajar-list' %}"><i class="fa fa-book"></i>{% t "nav_learn" %}</a></li>
+					<li class="{% if page == 'ai' %}sb-on{% endif %}"><a href="{% url 'ai-chat' %}"><i class="fa fa-comments"></i>{% t "nav_talk" %}</a></li>
+					<li class="{% if page == 'crowdsource' %}sb-on{% endif %}"><a href="{% url 'crowdsource-home' %}"><i class="fa fa-microphone"></i>{% t "nav_help" %}</a></li>
+				</ul>
+				<div class="sb-sec">Admin</div>
+				<ul>
+					<li class="{% if page == 'report' %}sb-on{% endif %}"><a href="{% url 'report-dash' %}"><i class="fa fa-bar-chart"></i>{% t "nav_report" %}</a></li>
+					<li class="{% if page == 'users' %}sb-on{% endif %}"><a href="{% url 'u-list' %}"><i class="fa fa-users"></i>{% t "nav_users" %}</a></li>
+					<li><a href="{% url 'admin:index' %}"><i class="fa fa-cogs"></i>{% t "nav_admin" %}</a></li>
+				</ul>
+				<hr>
+				<ul>
+					<li class="{% if page == 'account' %}sb-on{% endif %}"><a href="{% url 'user-account' %}"><i class="fa fa-user"></i>{% t "nav_account" %}</a></li>
+					<li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><i class="fa fa-sign-out"></i>{% t "nav_logout" %}</button></form></li>
+				</ul>
+			</div>
+		</div>
