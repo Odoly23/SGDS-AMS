@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from belajar.models import Kalimat
 from config.decorators import allowed_users
-from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, SEMUA_GRUP, nama_grup
+from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, nama_grup
 from crowdsource.models import RekamanSuara
 from crowdsource.utils import jenis_audio
 from custom.models import Bahasa, KarakterAI
@@ -39,15 +39,14 @@ def _kalimat_boleh():
 
 
 @login_required
-@allowed_users(allowed_roles=SEMUA_GRUP)
+@allowed_users(allowed_roles=BOLEH)
 def CrowdsourceHome(request):
-	"""Hanya group kontributor (dan admin) yang boleh merekam. Group lain melihat penjelasan cara menjadi kontributor."""
-	group = nama_grup(request.user)
-	context = {'group': group, 'page': 'crowdsource', 'title': 'Ajuda AI'}
-	if group not in BOLEH:
-		return render(request, 'crowdsource/info.html', context)
-	context['bahasa_list'] = _bahasa_aktif().annotate(n=Count('rekaman', filter=~Q(rekaman__status='ditolak')))
-	context['gaya_list'] = KarakterAI.objects.filter(aktif=True)
+	"""'Latih AI': hanya group kontributor dan admin. Siswa (pelajar) tidak perlu: tidak ada menu, dan halaman ini menampilkan 404."""
+	context = {
+		'group': nama_grup(request.user), 'page': 'crowdsource', 'title': 'Ajuda AI',
+		'bahasa_list': _bahasa_aktif().annotate(n=Count('rekaman', filter=~Q(rekaman__status='ditolak'))),
+		'gaya_list': KarakterAI.objects.filter(aktif=True),
+	}
 	return render(request, 'crowdsource/crowdsource.html', context)
 
 

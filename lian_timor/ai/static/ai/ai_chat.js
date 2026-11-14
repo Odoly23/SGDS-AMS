@@ -12,6 +12,8 @@
   var KUNCI = "lian_ai";
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var MESIN = { tet: "pt-PT", en: "en-US", pt: "pt-PT", id: "id-ID" };      // bahasa ucap -> mesin pengenalan suara
+  var GERAK_EMOJI = { lambai: "👋", angguk: "🙂", tertawa: "😄", jempol: "👍", tunjuk: "☝️", pikir: "🤔", bungkuk: "🙏", senyum: "😊" };
+  var GERAK_BAWAAN = { preman: "jempol", sopan: "senyum", profesional: "angguk" };     // bila AI tidak memilih gerak
   var st = { karakter: null, nama: "", keadaan: "diam", rec: null, berhenti: false, tanpaSuara: 0, terakhir: null, sisa: parseInt(D.sisa, 10) || 0, mulut: null, nomor: 0 };
 
   // ---------------------------------------------------------------- bantuan
@@ -65,13 +67,23 @@
     $("obrolan").appendChild(g); gulir();
   }
 
+  // ---------------------------------------------------------------- gerak-gerik lafaek
+  function gerakkan(d) {
+    var nama = d.gerak && GERAK_EMOJI[d.gerak] ? d.gerak : (d.koreksi ? "tunjuk" : (GERAK_BAWAAN[st.karakter] || "senyum"));
+    var g = $("gerak"), e = $("emoji-gerak");
+    g.className = "gerak"; e.className = "emoji-gerak"; void g.offsetWidth;          // mulai ulang animasi
+    g.classList.add("gerak-" + nama); g.setAttribute("data-gerak", nama);
+    e.textContent = GERAK_EMOJI[nama]; e.classList.add("tampil");
+    clearTimeout(st.tGerak); st.tGerak = setTimeout(function () { g.className = "gerak"; e.className = "emoji-gerak"; }, 1600);
+  }
+
   // ---------------------------------------------------------------- suara AI (SpeechSynthesis)
   function suara(lang) {
     var vs = window.speechSynthesis ? speechSynthesis.getVoices() : [], l = lang.toLowerCase();
     return vs.filter(function (v) { return v.lang.toLowerCase() === l; })[0] || vs.filter(function (v) { return v.lang.toLowerCase().indexOf(l.slice(0, 2)) === 0; })[0] || null;
   }
   function ucapkan(d, selesai) {
-    st.terakhir = d; $("ulang").disabled = false;
+    st.terakhir = d; $("ulang").disabled = false; gerakkan(d);
     if (!("speechSynthesis" in window)) { if (selesai) selesai(); return; }
     potongSuara(); var nomor = st.nomor;
     var bagian = [];
@@ -170,8 +182,8 @@
   });
   $("ganti").addEventListener("click", function (e) { e.preventDefault(); $("berhenti").click(); $("obrol").hidden = true; $("pilih").hidden = false; });
 
-  function mulai(kode, nama, emoji) {
-    st.karakter = kode; st.nama = emoji + " " + nama; $("info-karakter").textContent = st.nama;
+  function mulai(kode, nama, emoji, aksesori) {
+    st.karakter = kode; $("lafaek").setAttribute("data-gaya", kode); if (aksesori) $("aks-lafaek").src = aksesori; st.nama = emoji + " " + nama; $("info-karakter").textContent = st.nama;
     $("pilih").hidden = true; $("obrol").hidden = false; $("obrolan").innerHTML = ""; $("cat-tet").hidden = $("bahasa").value !== "tet";
     simpan(); keadaan("diam"); isiSisa();
     fetch(D.riwayat + "?karakter=" + encodeURIComponent(kode), { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (d) {
@@ -180,7 +192,7 @@
     }).catch(function () { /* riwayat opsional */ });
   }
   document.querySelectorAll(".pilih-karakter").forEach(function (b) {
-    b.addEventListener("click", function () { mulai(b.dataset.kode, b.dataset.nama, b.dataset.emoji); });
+    b.addEventListener("click", function () { mulai(b.dataset.kode, b.dataset.nama, b.dataset.emoji, b.dataset.aksesori); });
   });
 
   if (window.speechSynthesis) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = function () {}; }
@@ -189,7 +201,7 @@
     if (s.bahasa) $("bahasa").value = s.bahasa;
     if (typeof s.live === "boolean") $("live").checked = s.live;
     var b = s.karakter && document.querySelector(".pilih-karakter[data-kode='" + s.karakter + "']");
-    if (b) mulai(b.dataset.kode, b.dataset.nama, b.dataset.emoji);
+    if (b) mulai(b.dataset.kode, b.dataset.nama, b.dataset.emoji, b.dataset.aksesori);
   }
   isiSisa();
 })();

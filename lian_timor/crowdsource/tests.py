@@ -149,7 +149,8 @@ class Unggah(TestCase):
 	# ---- group ----
 	def test_hanya_kontributor_dan_admin(self):
 		self.client.force_login(user_grup('p', 'pelajar'))
-		self.assertIn('kontribuidór deit', self.client.get('/crowdsource/').content.decode())    # penjelasan
+		self.assertIn('Página não encontrada', self.client.get('/crowdsource/').content.decode())   # siswa: 404, tanpa halaman penjelasan
+		self.assertNotIn('id="cs"', self.client.get('/crowdsource/').content.decode())
 		self.assertEqual(self._kirim().status_code, 200)                                          # halaman 404 pola SJDF
 		self.assertEqual(RekamanSuara.objects.count(), 0)                                         # tapi TIDAK ada rekaman tersimpan
 		self.client.force_login(user_grup('a', 'admin'))

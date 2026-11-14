@@ -47,7 +47,7 @@ class Halaman(Dasar):
 		r = self.client.get('/ai/')
 		html = r.content.decode()
 		self.assertEqual(len(r.context['karakter_list']), 3)
-		for nama in ('AI Preman', 'AI Sopan', 'AI Profesionál'):
+		for nama in ('AI Bandidu', 'AI Respeitozu', 'AI Matenek'):      # nama Tetun
 			self.assertIn(nama, html)
 		self.assertIn('lafaek-buka.svg', html)                       # lafaek berbicara (mulut terbuka)
 		self.assertIn('id="lafaek"', html)                           # lafaek = tombol bicara
@@ -61,7 +61,7 @@ class Halaman(Dasar):
 
 	def test_karakter_nonaktif_tidak_tampil(self):
 		KarakterAI.objects.filter(kode='preman').update(aktif=False)
-		self.assertNotIn('AI Preman', self.client.get('/ai/').content.decode())
+		self.assertNotIn('data-kode="preman"', self.client.get('/ai/').content.decode())
 
 
 class Bicara(Dasar):
@@ -79,6 +79,16 @@ class Bicara(Dasar):
 	def test_gaya_karakter(self):
 		self.assertTrue(self.bicara(karakter='preman').json()['tet'].startswith('Woi!'))
 		self.assertTrue(self.bicara(karakter='sopan').json()['tet'].startswith('Favór ida'))
+
+	def test_gerak_gerik_khas_karakter_dan_selalu_dari_daftar_tertutup(self):
+		for karakter, bawaan in (('preman', 'jempol'), ('sopan', 'bungkuk'), ('profesional', 'angguk')):
+			g = self.bicara('xyz tidak dikenal', karakter=karakter).json()['gerak']
+			self.assertIn(g, llm.GERAK)
+		self.assertEqual(self.bicara('Bondia', karakter='preman').json()['gerak'], 'lambai')
+		self.assertEqual(self.bicara('modo fresku', karakter='preman').json()['gerak'], 'jempol')
+		self.assertEqual(self.bicara('modo fresku', karakter='sopan').json()['gerak'], 'bungkuk')   # karakter hormat tidak acung jempol
+		self.assertEqual(Giliran.objects.filter(gerak='lambai').count(), 1)
+		self.assertTrue(all(x['gerak'] in llm.GERAK for x in self.client.get('/ai/riwayat/', {'karakter': 'preman'}).json()['riwayat']))
 
 	def test_validasi(self):
 		self.assertEqual(self.bicara('   ').status_code, 400)
@@ -191,6 +201,8 @@ class LapisanModel(Dasar):
 		self.assertEqual([m['role'] for m in k['messages']], ['user', 'assistant', 'user'])
 		self.assertEqual(k['messages'][-1]['content'], "Ha'u diak")
 		self.assertEqual(json.loads(k['messages'][1]['content'])['tet'], 'Bondia! Ita diak ka lae?')   # riwayat dikirim sebagai JSON yang sama
+		self.assertEqual(set(json.loads(k['messages'][1]['content'])), {'tet', 'en', 'koreksi', 'gerak'})
+		self.assertIn('"gerak"', k['system'])                                                            # model diminta memilih gerak-gerik
 		self.assertIn(KarakterAI.objects.get(kode='sopan').prompt_sistem[:40], k['system'])             # gaya dari prompt yang diatur Admin
 		self.assertIn('JSON', k['system'])
 		self.assertIn('pasar', k['system'])                                                              # konteks peran ibu_pasar
@@ -209,8 +221,11 @@ class LapisanModel(Dasar):
 		self.assertIn('GAYA-BARU-DARI-ADMIN-XYZ', panggilan[0]['system'])
 
 	def test_urai_jawaban_model(self):
+		for teks, gerak in [('{"tet": "A", "gerak": "Jempol"}', 'jempol'), ('{"tet": "A", "gerak": "joget-gila"}', ''),
+		                    ('{"tet": "A", "gerak": null}', ''), ('{"tet": "A"}', ''), ('{"tet": "A", "gerak": "*menari*"}', '')]:
+			self.assertEqual(llm._hasil_dari_teks(teks).gerak, gerak, teks)             # gerak di luar daftar dibuang
 		for teks, tet, kor in [
-			('{"tet": "A", "en": "B", "koreksi": "C"}', 'A', 'C'),
+			('{"tet": "A", "en": "B", "koreksi": "C", "gerak": "jempol"}', 'A', 'C'),
 			('```json\n{"tet": "A", "en": "B", "koreksi": ""}\n```', 'A', ''),
 			('Baik! {"tet": "A", "en": "B", "koreksi": null} semoga membantu', 'A', ''),
 			('Bondia, ita diak?', 'Bondia, ita diak?', ''),                       # bukan JSON: seluruh teks = jawaban Tetun
@@ -233,3 +248,36 @@ class LapisanModel(Dasar):
 				self.assertEqual(self.bicara().status_code, 503, type(exc).__name__)
 		with ai_cfg(BACKEND='anthropic', ANTHROPIC_API_KEY=''):
 			self.assertEqual(self.bicara().status_code, 503)
+
+
+class KarakterBaru(Dasar):
+	def test_nama_tetun_deskripsi_tetun_dan_prompt_diperkaya(self):
+		nama = {k.kode: k.nama_tet for k in KarakterAI.objects.all()}
+		self.assertEqual(nama, {'preman': 'AI Bandidu', 'sopan': 'AI Respeitozu', 'profesional': 'AI Matenek'})
+		for k in KarakterAI.objects.all():
+			self.assertNotIn('Gaya jalan', k.deskripsi_tet)                    # deskripsi Tetun tidak boleh berisi bahasa Indonesia
+			self.assertIn('GAYA BICARA', k.prompt_sistem)
+			self.assertIn('GERAK-GERIK', k.prompt_sistem)
+		preman, sopan, pro = (KarakterAI.objects.get(kode=c).prompt_sistem for c in ('preman', 'sopan', 'profesional'))
+		self.assertIn('BATAS KERAS', preman)                                   # "Bandidu" hanya persona lucu: batas keselamatan tetap
+		self.assertIn('jangan menghina', preman)
+		self.assertIn('"Ita boot"', sopan)
+		self.assertIn('Bele mós dehan', sopan)                                 # koreksi lembut sebagai saran
+		self.assertIn('Uluk', pro)
+
+	def test_aksesori_dan_lafaek_berbicara_tersedia_untuk_tiap_karakter(self):
+		from django.contrib.staticfiles import finders
+		for kode in ('preman', 'sopan', 'profesional'):
+			self.assertTrue(finders.find(f'main/images/aksesori-{kode}.svg'), kode)
+		self.assertTrue(finders.find('main/images/lafaek-buka.svg'))
+		html = self.client.get('/ai/').content.decode()
+		for kode in ('preman', 'sopan', 'profesional'):
+			self.assertIn(f'aksesori-{kode}.svg', html)
+
+	def test_semua_animasi_gerak_ada_di_css(self):
+		from django.contrib.staticfiles import finders
+		css = open(finders.find('main/css/main.css'), encoding='utf-8').read()
+		for g in llm.GERAK:
+			self.assertIn(f'.gerak.gerak-{g}', css, g)
+		for gaya in ('preman', 'sopan', 'profesional'):
+			self.assertIn(f'[data-keadaan="bicara"][data-gaya="{gaya}"]', css)

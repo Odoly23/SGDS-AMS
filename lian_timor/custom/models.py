@@ -102,7 +102,7 @@ class Materi(models.Model):
 
 class KarakterAI(models.Model):
 	"""3 karakter AI. Admin boleh mengubah teks & instruksinya kapan saja."""
-	kode = models.CharField(choices=[('preman', 'AI Preman'), ('sopan', 'AI Sopan'), ('profesional', 'AI Profesional')],
+	kode = models.CharField(choices=[('preman', 'AI Bandidu (preman)'), ('sopan', 'AI Respeitozu (sopan)'), ('profesional', 'AI Matenek (profesional)')],
 							max_length=12, unique=True, verbose_name="Kódigu")
 	nama_tet = models.CharField(max_length=60, verbose_name="Naran (Tetun)")
 	nama_en = models.CharField(max_length=60, blank=True, verbose_name="Naran (English)")

@@ -321,17 +321,63 @@ footer.page-footer strong { color: var(--kuning); }
 .pengaturan-ai { padding-top: 6px; }
 .lafaek-btn { position: relative; width: 128px; height: 128px; border-radius: 50%; border: 7px solid var(--white); background: var(--navy);
   box-shadow: 0 8px 0 rgba(27,20,17,.9), 0 12px 26px rgba(0,0,0,.28); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-.lafaek-btn img { width: 94px; height: 94px; pointer-events: none; transition: transform .12s; }
+
 .lafaek-btn:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(27,20,17,.9); }
 .lafaek-btn::before, .lafaek-btn::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 4px solid var(--kuning); opacity: 0; pointer-events: none; }
 .lafaek-btn[data-keadaan="dengar"] { background: #9E1812; }
 .lafaek-btn[data-keadaan="dengar"]::before, .lafaek-btn[data-keadaan="dengar"]::after { animation: gelombang 1.4s ease-out infinite; }
 .lafaek-btn[data-keadaan="dengar"]::after { animation-delay: .7s; }
 @keyframes gelombang { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.4); opacity: 0; } }
-.lafaek-btn[data-keadaan="pikir"] img { animation: goyang 1s ease-in-out infinite; }
-@keyframes goyang { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
-.lafaek-btn[data-keadaan="bicara"] img { animation: ngomong .36s ease-in-out infinite; }
-@keyframes ngomong { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
 .status-ai { font-weight: 900; font-size: 1rem; margin-top: 8px; color: var(--navy-dk); min-height: 1.5rem; }
 .pilih-karakter { text-align: left; }
-@media (max-height: 700px) { .lafaek-btn { width: 104px; height: 104px; } .lafaek-btn img { width: 76px; height: 76px; } }
+@media (max-height: 700px) { .lafaek-btn { width: 104px; height: 104px; } .lafaek-btn .gerak, .lafaek-btn .badan { width: 76px; height: 76px; } }
+
+/* ── Lafaek hidup: aksesori & gerak-gerik khas tiap karakter ── */
+.lafaek-btn .gerak, .lafaek-btn .badan { display: block; position: relative; width: 94px; height: 94px; pointer-events: none; }
+.lafaek-btn .badan { transform-origin: 50% 85%; }
+.lafaek-btn .badan img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mini-lafaek { position: relative; display: block; width: 100%; height: 100%; }
+.mini-lafaek img { position: absolute; inset: 6%; width: 88%; height: 88%; }
+.kartu-level .gambar:has(.mini-lafaek) { background: var(--kain); }
+.emoji-gerak { position: absolute; top: -14px; right: -10px; font-size: 2.1rem; line-height: 1; opacity: 0; pointer-events: none; }
+.emoji-gerak.tampil { animation: muncul-emoji 1.5s ease-out; }
+@keyframes muncul-emoji { 0% { opacity: 0; transform: translateY(14px) scale(.4); } 18% { opacity: 1; transform: translateY(0) scale(1.25); } 35% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px) scale(1); } }
+
+/* sikap saat BERBICARA (berbeda tiap karakter) */
+.lafaek-btn[data-keadaan="bicara"][data-gaya="preman"] .badan { animation: sikap-bandidu .52s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="bicara"][data-gaya="sopan"] .badan { animation: sikap-respeitozu 1.6s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="bicara"][data-gaya="profesional"] .badan { animation: sikap-matenek 1.1s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="bicara"]:not([data-gaya]) .badan, .lafaek-btn[data-keadaan="bicara"][data-gaya=""] .badan { animation: sikap-matenek 1s ease-in-out infinite; }
+@keyframes sikap-bandidu { 0%,100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-5px) rotate(5deg); } }      /* mengangguk mengikuti irama, bergaya */
+@keyframes sikap-respeitozu { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(2px) rotate(2deg); } }  /* bergoyang pelan, anggun */
+@keyframes sikap-matenek { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }                                 /* tegak, anggukan kecil */
+/* sikap saat MENDENGARKAN */
+.lafaek-btn[data-keadaan="dengar"][data-gaya="preman"] .badan { animation: dengar-bandidu 1s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="dengar"][data-gaya="sopan"] .badan { animation: dengar-respeitozu 2.2s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="dengar"][data-gaya="profesional"] .badan { animation: dengar-matenek 2.4s ease-in-out infinite; }
+@keyframes dengar-bandidu { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-7deg) translateX(-3px); } }                         /* miring, "ayo, ngomong" */
+@keyframes dengar-respeitozu { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(3px) rotate(4deg); } }       /* menunduk memperhatikan */
+@keyframes dengar-matenek { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }                                         /* tegak, fokus */
+/* sikap saat BERPIKIR */
+.lafaek-btn[data-keadaan="pikir"] .badan { animation: pikir-umum 1.6s ease-in-out infinite; }
+.lafaek-btn[data-keadaan="pikir"][data-gaya="preman"] .badan { animation-duration: .9s; }
+.lafaek-btn[data-keadaan="pikir"][data-gaya="sopan"] .badan { animation-duration: 2.2s; }
+@keyframes pikir-umum { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+
+/* gerak-gerik sekali putar (dipilih AI per jawaban) */
+.gerak.gerak-lambai   { animation: g-lambai 1.3s ease-in-out; }
+.gerak.gerak-angguk   { animation: g-angguk 1.1s ease-in-out; }
+.gerak.gerak-tertawa  { animation: g-tertawa 1.2s ease-in-out; }
+.gerak.gerak-jempol   { animation: g-jempol 1.1s ease-out; }
+.gerak.gerak-tunjuk   { animation: g-tunjuk 1.3s ease-in-out; }
+.gerak.gerak-pikir    { animation: g-pikir 1.4s ease-in-out; }
+.gerak.gerak-bungkuk  { animation: g-bungkuk 1.5s ease-in-out; }
+.gerak.gerak-senyum   { animation: g-senyum 1.2s ease-in-out; }
+@keyframes g-lambai   { 0%,100% { transform: rotate(0); } 15% { transform: rotate(-12deg); } 35% { transform: rotate(12deg); } 55% { transform: rotate(-12deg); } 75% { transform: rotate(10deg); } }
+@keyframes g-angguk   { 0%,100% { transform: translateY(0); } 20%,60% { transform: translateY(7px); } 40%,80% { transform: translateY(0); } }
+@keyframes g-tertawa  { 0%,100% { transform: translate(0,0) rotate(0); } 10% { transform: translate(-3px,-4px) rotate(-5deg); } 20% { transform: translate(3px,0) rotate(5deg); } 30% { transform: translate(-3px,-4px) rotate(-5deg); } 40% { transform: translate(3px,0) rotate(5deg); } 50% { transform: translate(-2px,-3px) rotate(-4deg); } 60% { transform: translate(2px,0) rotate(4deg); } }
+@keyframes g-jempol   { 0% { transform: scale(1); } 25% { transform: scale(1.18) translateY(-6px); } 50% { transform: scale(.96); } 100% { transform: scale(1); } }
+@keyframes g-tunjuk   { 0%,100% { transform: translateX(0) rotate(0); } 25%,75% { transform: translateX(-9px) rotate(-9deg); } }
+@keyframes g-pikir    { 0%,100% { transform: rotate(0); } 30%,70% { transform: rotate(10deg) translateY(2px); } }
+@keyframes g-bungkuk  { 0%,100% { transform: translateY(0) rotate(0); } 30%,65% { transform: translateY(12px) rotate(14deg); } }
+@keyframes g-senyum   { 0%,100% { transform: scale(1); } 40% { transform: scale(1.1); } }

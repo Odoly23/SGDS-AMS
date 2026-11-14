@@ -61,15 +61,19 @@ class HalamanDanMenu(Dasar):
 			for t in c['tak']:
 				self.assertNotIn(t, nav, f'{grup} tidak boleh punya {t}')
 
-	def test_beranda_empat_menu_dan_lima_level_dan_tombol_buaya(self):
+	def test_beranda_menu_siswa_tanpa_latih_ai_dan_kontributor_empat_menu(self):
 		self.client.force_login(user_grup('p', 'pelajar'))
 		html = self.client.get('/').content.decode()
-		for u in ("/ai/", "/belajar/", "/crowdsource/", "/users/account/"):
+		for u in ("/ai/", "/belajar/", "/users/account/"):
 			self.assertIn(f'href="{u}"', html)
+		self.assertNotIn('href="/crowdsource/"', html)                   # siswa tidak perlu "latih AI"
 		for n in range(1, 6):
 			self.assertIn(f'href="/belajar/nivel/{n}/"', html)
 		self.assertIn('class="fab-bicara"', html)
 		self.assertIn('<html lang="tet"', html)
+		for g in ('kontributor', 'admin'):
+			self.client.force_login(user_grup(f'k-{g}', g))
+			self.assertIn('href="/crowdsource/"', self.client.get('/').content.decode(), g)
 
 	def test_pembatasan_group(self):
 		self.client.force_login(user_grup('p', 'pelajar'))
@@ -79,10 +83,11 @@ class HalamanDanMenu(Dasar):
 			self.assertIn('Página não encontrada', html, url)
 			self.assertNotIn('class="stat"', html)
 			self.assertNotIn('<table', html)
-		html = self.client.get('/crowdsource/').content.decode()      # pelajar: penjelasan, bukan fitur rekam
-		self.assertIn('kontribuidór deit', html)
+		html = self.client.get('/crowdsource/').content.decode()      # siswa: halaman 404 (pola SJDF), bukan fitur rekam
+		self.assertIn('Página não encontrada', html)
+		self.assertNotIn('id="cs"', html)
 		self.client.force_login(user_grup('k', 'kontributor'))
-		self.assertNotIn('kontribuidór deit', self.client.get('/crowdsource/').content.decode())
+		self.assertIn('id="cs"', self.client.get('/crowdsource/').content.decode())
 		self.assertIn('Página não encontrada', self.client.get('/report/').content.decode())
 
 	def test_pengguna_tanpa_group_tidak_bisa_masuk_halaman(self):

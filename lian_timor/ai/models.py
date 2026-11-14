@@ -16,6 +16,7 @@ class Giliran(models.Model):
 	jawab_tet = models.TextField(verbose_name="Jawaban (Tetun)")
 	jawab_en = models.TextField(blank=True, verbose_name="Jawaban (English)")
 	koreksi = models.TextField(blank=True, verbose_name="Koresaun")
+	gerak = models.CharField(max_length=12, blank=True, verbose_name="Gerak-gerik lafaek", help_text="senyum/angguk/lambai/tertawa/jempol/tunjuk/pikir/bungkuk")
 	demo = models.BooleanField(default=False, help_text="Jawaban contoh dari mode demo (bukan dari model AI)")
 	model = models.CharField(max_length=60, blank=True)
 	token_masuk = models.PositiveIntegerField(default=0)

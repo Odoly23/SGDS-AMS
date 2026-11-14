@@ -33,7 +33,7 @@ def _terpakai_hari_ini(user):
 
 
 def _baris(g):
-	return {'ucapan': g.ucapan, 'tet': g.jawab_tet, 'en': g.jawab_en, 'koreksi': g.koreksi, 'demo': g.demo}
+	return {'ucapan': g.ucapan, 'tet': g.jawab_tet, 'en': g.jawab_en, 'koreksi': g.koreksi, 'gerak': g.gerak, 'demo': g.demo}
 
 
 @login_required
@@ -86,7 +86,7 @@ def Bicara(request):
 		return galat('galat', 503, sisa=sisa)                      # gagal: TIDAK dicatat dan TIDAK mengurangi jatah harian
 
 	g = Giliran.objects.create(user=request.user, karakter=karakter, bahasa_ucap=bahasa, ucapan=ucapan, jawab_tet=h.tet, jawab_en=h.en,
-	                           koreksi=h.koreksi, demo=h.demo, model=h.model, token_masuk=h.token_masuk, token_keluar=h.token_keluar)
+	                           koreksi=h.koreksi, gerak=h.gerak, demo=h.demo, model=h.model, token_masuk=h.token_masuk, token_keluar=h.token_keluar)
 	return JsonResponse({'ok': True, **_baris(g), 'sisa': sisa - 1})
 
 

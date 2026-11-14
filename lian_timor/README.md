@@ -29,7 +29,7 @@ lian_timor/
 |---|---|
 | `admin` | semuanya: Relatóriu, Utilizadór (matikan/aktifkan), Admin Django (setujui/tolak suara, kelola level/kalimat/karakter AI) |
 | `kontributor` | belajar, bicara dengan AI, **crowdsource (rekam suara)** |
-| `pelajar` | belajar, bicara dengan AI. Daftar baru dan akun tamu masuk group ini. Kartu "Ajuda AI" menampilkan penjelasan, bukan fitur rekam |
+| `pelajar` | belajar dan bicara dengan AI. Daftar baru dan akun tamu masuk group ini. **Siswa tidak melihat "Ajuda AI" (latih AI) sama sekali**: tidak ada kartu atau menu, dan halamannya menampilkan 404 |
 
 Admin menaikkan user menjadi `kontributor` lewat Admin Django (Users, ubah Groups). **Satu group per user**: `allowed_users`
 hanya membaca group pertama, sama seperti di SJDF.
@@ -98,12 +98,16 @@ per pengirim; maks 10 per menit dan 100 per hari per user; nama berkas diacak. *
 
 ## Ko'alia ho AI (`/ai/`): bicara langsung dengan lafaek
 Seperti aplikasi latihan bicara: **tekan lafaek, bicara, AI menjawab dengan suara dan tulisan (Tetun + Inggris), lalu lafaek otomatis mendengarkan lagi** (tanpa mengetik).
-1. Pilih salah satu dari 3 karakter: **AI Preman**, **AI Sopan**, **AI Profesional**. Gaya bicaranya diambil dari teks `prompt_sistem` yang bisa diubah Admin (Admin > Karakter AI) tanpa menyentuh kode.
-2. **Lafaek** adalah tombol bicara. Ia berganti gambar: diam, **mendengarkan** (gelombang), **berpikir** (goyang), **berbicara** (mulut membuka-menutup selama suara AI).
+1. Pilih salah satu dari 3 karakter (nama Tetun): **AI Bandidu** (preman, gaya jalanan Dili yang lucu), **AI Respeitozu** (sopan, lembut dan sabar), **AI Matenek** (profesional, formal untuk hotel dan kantor). Gaya bicaranya diambil dari teks `prompt_sistem` yang bisa diubah Admin (Admin > Karakter AI) tanpa menyentuh kode.
+   - **Gaya bicara**: tiap karakter punya aturan sendiri (sapaan, kata santun, cara memuji dan mengoreksi, skenario) di `custom/management/commands/seed_awal.py`. "Bandidu" hanya persona lucu: batas keselamatan tetap berlaku (tidak menghina, mengancam, atau menyinggung SARA).
+   - **Gerak-gerik**: tiap karakter punya aksesori dan sikap sendiri. Bandidu berkacamata hitam dan bandana, mengangguk bergaya mengikuti irama, Respeitozu berbunga dan bergoyang pelan, Matenek berkacamata dan berdasi kupu-kupu, tegak dan fokus. Di tiap jawaban AI memilih satu **gerak** dari daftar tertutup (senyum, angguk, lambai, tertawa, jempol, tunjuk, pikir, bungkuk) dan lafaek memeragakannya dengan emoji kecil. Nilai di luar daftar dibuang; bila AI tidak memilih, dipakai gerak bawaan karakter.
+2. **Lafaek** adalah tombol bicara. Ia berganti gambar: diam, **mendengarkan** (gelombang), **berpikir** (goyang), **berbicara** (mulut membuka-menutup selama suara AI). Sikapnya di tiap keadaan berbeda menurut karakter.
 3. Setiap jawaban tampil sebagai gelembung: Tetun (besar) + terjemahan Inggris + kotak **Koresaun** bila kalimat Anda ada kesalahan bahasa. Tiap gelembung punya tombol dengar sendiri; tombol **Ulangi lian AI** mengulang jawaban terakhir.
 4. Menekan lafaek saat AI sedang bicara **memotong** AI dan langsung mendengarkan. **Para konversa** menghentikan semuanya. Mode "Ko'alia direta" bisa dimatikan.
 5. Kolom ketik selalu ada (cadangan bila browser tidak bisa mengenali suara). Pilih bahasa yang Anda ucapkan: Tetun / English / Português / Indonesia. Riwayat bisa dihapus user ("Hamoos istória").
 6. Materi menyesuaikan jawaban "Kamu siapa?" (anak sekolah, dewasa, guru, ibu di pasar).
+
+**Catatan pembaruan**: migrasi `custom/0003` memperbarui nama, deskripsi, dan prompt karakter di basis data yang sudah ada **hanya bila isinya masih sama dengan bawaan lama**; jika Admin sudah menyuntingnya, suntingan Admin dipertahankan.
 
 **Backend AI** (`.env`): `AI_BACKEND=dummy` (default; balasan contoh, ditandai MODE DEMO, gratis) atau `AI_BACKEND=anthropic` (model berbayar; Anda membayar per token).
 `ANTHROPIC_API_KEY` hanya di server. Pilih model lewat `ANTHROPIC_MODEL`: `claude-opus-5-5` (default, paling pintar), `claude-sonnet-5-5`, `claude-haiku-5-5` (paling murah).
