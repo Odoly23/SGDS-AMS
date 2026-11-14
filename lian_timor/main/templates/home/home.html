@@ -38,7 +38,7 @@
 <section aria-labelledby="judul-hari-ini">
 	<h2 id="judul-hari-ini" class="judul-halaman">{% t "today_title" %}</h2>
 	{% for l in levels %}
-		<a href="{% url 'belajar-list' %}?level={{ l.nomor }}" class="kartu kartu-{{ l.warna }} kartu-level">
+		<a href="{% url "belajar-level" l.nomor %}" class="kartu kartu-{{ l.warna }} kartu-level">
 			<span class="gambar" aria-hidden="true">{{ l.emoji }}</span>
 			<span>
 				<span class="nivel d-block">{% t "level" %} {{ l.nomor }}</span>

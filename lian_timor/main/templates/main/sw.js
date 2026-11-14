@@ -1,5 +1,7 @@
 {% load static %}/* Service worker Lian Timor: membuat halaman yang sudah dibuka tetap bisa dipakai tanpa internet. */
-const VERSI = "lian-{{ versi }}";
+// Dua cache terpisah: STATIK (CSS/JS/gambar, aman) dan HALAMAN (HTML, bisa memuat progres user -> dihapus saat logout)
+const STATIK = "lian-statik-{{ versi }}";
+const HALAMAN = "lian-halaman-{{ versi }}";
 const KULIT = [
   "/offline/",
   "{% static 'main/css/bootstrap.min.css' %}", "{% static 'main/css/main.css' %}",
@@ -14,12 +16,12 @@ const KULIT = [
 const JANGAN_SIMPAN = /^\/(admin|users|report|login|logout|tamu)(\/|$)/;
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSI).then((c) => c.addAll(KULIT)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(STATIK).then((c) => c.addAll(KULIT)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((nama) => Promise.all(nama.filter((n) => n.startsWith("lian-") && n !== VERSI).map((n) => caches.delete(n))))
+    caches.keys().then((nama) => Promise.all(nama.filter((n) => n.startsWith("lian-") && n !== STATIK && n !== HALAMAN).map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });
@@ -35,7 +37,7 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(req).then((res) => {
         // jangan simpan hasil pengalihan / galat; simpan halaman yang berhasil
-        if (res.ok && !res.redirected) { const salinan = res.clone(); caches.open(VERSI).then((c) => c.put(req, salinan)); }
+        if (res.ok && !res.redirected) { const salinan = res.clone(); caches.open(HALAMAN).then((c) => c.put(req, salinan)); }
         return res;
       }).catch(() => caches.match(req).then((r) => r || caches.match("/offline/")))
     );
@@ -45,7 +47,7 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.startsWith("/static/") || url.pathname.startsWith("/media/")) {
     e.respondWith(
       caches.match(req).then((r) => r || fetch(req).then((res) => {
-        if (res.ok) { const salinan = res.clone(); caches.open(VERSI).then((c) => c.put(req, salinan)); }
+        if (res.ok) { const salinan = res.clone(); caches.open(STATIK).then((c) => c.put(req, salinan)); }
         return res;
       }))
     );

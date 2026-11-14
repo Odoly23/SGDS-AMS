@@ -259,3 +259,50 @@ footer.page-footer {
   color: rgba(255,255,255,.75); padding: 14px 0 16px; text-align: center; font-size: .78rem;
 }
 footer.page-footer strong { color: var(--kuning); }
+
+/* ── Belajar ── */
+.min-w-0 { min-width: 0; }
+.progres { display: block; height: 14px; border-radius: 99px; background: rgba(255,255,255,.35); overflow: hidden; }
+.progres > span { display: block; height: 100%; border-radius: 99px; background: var(--kuning); transition: width .3s; }
+.kartu-kuning .progres, .kartu-putih .progres { background: rgba(27,20,17,.18); }
+.kartu-kuning .progres > span, .kartu-putih .progres > span { background: var(--navy); }
+.kartu-hitam .progres > span { background: var(--kuning); }
+.kalimat-kartu { background: var(--white); border-radius: 20px; padding: 14px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.09); }
+.kalimat-kartu .emoji { font-size: 2.4rem; line-height: 1; margin-right: 12px; flex: none; }
+.kalimat-kartu .baris { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: .95rem; color: #4a3f37; }
+.kalimat-kartu .baris .tet { font-size: 1.35rem; line-height: 1.25; color: var(--navy-dk); }
+.kalimat-kartu .kode { flex: none; width: 2rem; font-size: .65rem; font-weight: 900; letter-spacing: .04em; color: var(--white); background: var(--navy-dk); border-radius: 6px; text-align: center; padding: 1px 0; }
+.kalimat-kartu .baris .tet + * { margin-left: auto; }
+.kalimat-kartu .mini { margin-left: auto; flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 0; background: var(--kuning); color: var(--navy-dk); font-size: 1.1rem; cursor: pointer; }
+.kalimat-kartu .mini:disabled { opacity: .35; cursor: not-allowed; }
+.kalimat-kartu .aksi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.kalimat-kartu .aksi .btn-lian { font-size: 1rem; min-height: 3.4rem; padding: 4px 6px; }
+.kalimat-kartu .aksi .btn-belajar { grid-column: 1 / -1; }
+.kalimat-kartu .btn-lian:disabled { opacity: .45; box-shadow: none; }
+.kalimat-kartu .btn-rekam.merekam { background: var(--navy); animation: denyut-tombol 1s infinite; }
+@keyframes denyut-tombol { 50% { box-shadow: 0 0 0 6px rgba(200,32,26,.35), 0 5px 0 rgba(27,20,17,.9); } }
+.btn-belajar .lbl-sudah { display: none; }
+.btn-belajar.sudah { background: #1E7B34; }
+.btn-belajar.sudah .lbl-sudah { display: inline; }
+.btn-belajar.sudah .lbl-belum { display: none; }
+.hasil-rekam { margin-top: 10px; }
+.hasil-rekam audio { height: 42px; }
+
+/* ── Crowdsource (Ajuda AI) ── */
+.judul-langkah { font-size: 1.15rem; font-weight: 900; margin: 14px 0 12px; }
+.pilih-lian { width: 100%; min-height: 4.2rem; border: 3px solid var(--navy-dk); border-radius: 16px; background: var(--white); color: var(--navy-dk);
+  font-weight: 900; font-size: 1.05rem; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.2; cursor: pointer;
+  box-shadow: 0 4px 0 rgba(27,20,17,.9); }
+.pilih-lian:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(27,20,17,.9); }
+.pilih-lian .jumlah { font-weight: 700; color: var(--navy); }
+.pilih-gaya { text-align: left; }
+.mic-besar { width: 132px; height: 132px; border-radius: 50%; border: 6px solid var(--white); background: var(--navy); color: var(--white); font-size: 3.4rem;
+  box-shadow: 0 8px 0 rgba(27,20,17,.9), 0 10px 24px rgba(0,0,0,.25); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.mic-besar:active { transform: translateY(6px); box-shadow: 0 2px 0 rgba(27,20,17,.9); }
+.mic-besar.merekam { animation: denyut-mic 1s infinite; background: #9E1812; }
+.mic-besar.merekam i::before { content: "\f04d"; }                  /* ikon "stop" saat merekam */
+@keyframes denyut-mic { 0%,100% { box-shadow: 0 8px 0 rgba(27,20,17,.9), 0 0 0 0 rgba(200,32,26,.5); } 50% { box-shadow: 0 8px 0 rgba(27,20,17,.9), 0 0 0 20px rgba(200,32,26,0); } }
+.timer { font-size: 1.6rem; font-weight: 900; color: var(--navy); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.aksi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.terima-kasih { text-align: center; background: var(--white); border-radius: 20px; padding: 20px 16px; box-shadow: 0 2px 12px rgba(0,0,0,.09); }
+.terima-kasih .besar { font-size: 3.4rem; line-height: 1; }

@@ -1,0 +1,102 @@
+{% extends "main/layout.html" %}
+{% load static lian_tags %}
+{% block bicara %}{% endblock %}   {# di halaman ini tombol buaya disembunyikan: hanya ada satu tombol besar, yaitu mikrofon merah #}
+{% block content %}
+<h1 class="judul-halaman mt-0 text-center">{% t "cs_title" %}</h1>
+
+<div id="cs" data-berikut="{% url 'crowdsource-berikut' %}" data-kirim="{% url 'crowdsource-kirim' %}">
+
+	{# ===== 1. Pilih lian rejionál ===== #}
+	<section id="langkah1" class="langkah">
+		<h2 class="judul-langkah">{% t "cs_pick_lang" %}</h2>
+		<div class="row">
+			{% for b in bahasa_list %}
+			<div class="col-6 mb-3">
+				<button type="button" class="pilih-lian" data-kode="{{ b.kode }}" data-nama="{{ b.nama }}" data-n="{{ b.n }}">
+					<span class="nama">{{ b.nama }}{% if b.perlu_verifikasi %} <small>(?)</small>{% endif %}</span>
+					<small class="jumlah"><i class="fa fa-microphone"></i> {{ b.n }}</small>
+				</button>
+			</div>
+			{% endfor %}
+		</div>
+	</section>
+
+	{# ===== 2. Pilih gaya bicara ===== #}
+	<section id="langkah2" class="langkah" hidden>
+		<h2 class="judul-langkah">{% t "cs_pick_style" %}</h2>
+		{% for g in gaya_list %}
+		<button type="button" class="kartu kartu-{{ g.warna }} kartu-level w-100 border-0 pilih-gaya" data-kode="{{ g.kode }}" data-nama="{{ g.nama_tet }}" data-emoji="{{ g.emoji }}">
+			<span class="gambar" aria-hidden="true">{{ g.emoji }}</span>
+			<span class="flex-fill">
+				<span class="nama d-block">{% ml g "nama" %}</span>
+				<span class="d-block small font-weight-bold">{% ml g "deskripsi" %}</span>
+				{% if g.contoh_tet %}<span class="d-block small mt-1" style="opacity:.9">“{{ g.contoh_tet }}”</span>{% endif %}
+			</span>
+		</button>
+		{% endfor %}
+		<button type="button" class="btn-lian hitam mt-2" data-ke="1">{% t "back" %}</button>
+	</section>
+
+	{# ===== 3. Rekam ===== #}
+	<section id="langkah3" class="langkah" hidden>
+		<div class="d-flex justify-content-between align-items-center mb-2 small font-weight-bold">
+			<span><span class="badge badge-dark" id="info-lian"></span> <span class="badge badge-warning" id="info-gaya"></span></span>
+			<a href="#" id="ganti" class="text-danger">{% t "account_change_role" %}</a>
+		</div>
+
+		<div class="kalimat-kartu mb-3" id="kartu-kalimat" hidden>
+			<p class="mb-1 font-weight-bold" style="color:var(--navy)">{% tpl "cs_say" lian="…" %}</p>
+			<div class="d-flex align-items-center">
+				<span class="emoji" id="k-emoji" aria-hidden="true"></span>
+				<div class="min-w-0">
+					<div class="baris"><b class="tet" id="k-tet"></b></div>
+					<div class="baris" data-bahasa="en"><span class="kode">EN</span><span id="k-en"></span></div>
+					<div class="baris" data-bahasa="pt"><span class="kode">PT</span><span id="k-pt"></span></div>
+					<div class="baris" data-bahasa="id"><span class="kode">ID</span><span id="k-id"></span></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="text-center">
+			<button type="button" id="mic" class="mic-besar" aria-label="Grava"><i class="fa fa-microphone"></i></button>
+			<div id="mic-label" class="font-weight-bold mt-2">{% t "cs_record_hint" %}</div>
+			<div id="timer" class="timer" hidden>0:00</div>
+		</div>
+
+		<div id="hasil" class="mt-3" hidden>
+			<audio id="putar" controls class="w-100"></audio>
+			<div class="aksi mt-3">
+				<button type="button" id="ulang" class="btn-lian kuning"><i class="fa fa-repeat"></i> {% t "cs_again" %}</button>
+				<button type="button" id="kirim" class="btn-lian merah"><i class="fa fa-paper-plane"></i> {% t "send" %}</button>
+			</div>
+		</div>
+
+		<div id="terima" class="terima-kasih" hidden>
+			<div class="besar">🎉</div>
+			<p class="h5 font-weight-bold mb-2">{% t "cs_thanks" %}</p>
+			<p class="mb-3" id="penghitung">{% tpl "cs_counter" n="0" lian="" %}</p>
+			<button type="button" id="lagi" class="btn-lian merah">{% t "cs_skip" %}</button>
+		</div>
+
+		<p id="pesan" class="text-center font-weight-bold mt-3" role="status" hidden></p>
+		<p id="kosong" class="text-center text-muted my-4" hidden>{% t "cs_none" %}</p>
+
+		<button type="button" id="lewati" class="btn-lian hitam mt-4">{% t "cs_skip" %}</button>
+	</section>
+
+	{# teks pesan 4 bahasa (diambil JS sesuai bahasa yang dipilih) #}
+	<template id="t-mic">{% t "mic_error" %}</template>
+	<template id="t-pendek">{% t "cs_too_short" %}</template>
+	<template id="t-galat">{% t "cs_send_error" %}</template>
+	<template id="t-kirim">{% t "cs_sending" %}</template>
+	<template id="t-offline">{% t "cs_offline" %}</template>
+	<template id="t-berhenti">{% t "stop" %}</template>
+
+	<p class="small text-muted text-center mt-4"><i class="fa fa-lock"></i> {% t "cs_privacy" %}</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'main/js/rekam.js' %}"></script>
+<script src="{% static 'crowdsource/crowdsource.js' %}"></script>
+{% endblock %}

@@ -17,8 +17,8 @@ lian_timor/
 │   ├── static/main/       css (bootstrap, main.css), js, font-awesome, images (tais.svg, lafaek.svg), icons, fonts
 │   └── templates/         main/{layout,navbar,adm,kontributor,pelajar,segera}.html, home/{home,login,logout,offline,403,404,500}.html
 ├── users/                 Perfil (OneToOne ke User), daftar, "Kamu siapa?", akun, daftar utilizador   (auth_utils.py, forms.py)
-├── belajar/               Kalimat, ProgresBelajar            (halaman belajar: menyusul)
-├── crowdsource/           RekamanSuara                       (halaman rekam: menyusul)
+├── belajar/               Kalimat, ProgresBelajar; halaman Belajar (level, kalimat 4 bahasa, dengar, rekam, progres); seed_level1
+├── crowdsource/           RekamanSuara; halaman 'Ajuda AI' (pilih lian, estilu, rekam, kirim); validasi unggahan
 ├── ai/                    ai_chat                            (menyusul)
 └── report/                admin_dashboard (jumlah user, suara per bahasa, grafik batang)
 ```
@@ -44,6 +44,7 @@ pip install -r requirements.txt
 cp .env.example .env              # Windows: copy .env.example .env
 python manage.py migrate
 python manage.py seed_awal        # 3 group, 33 bahasa, 5 level, 3 karakter AI
+python manage.py seed_level1      # 20 kalimat Level 1 (DRAF AI, perlu dicek penutur asli)
 python manage.py buat_admin admin@contoh.com      # admin pertama (kata sandi diminta)
 python manage.py runserver
 ```
@@ -74,13 +75,44 @@ Buka http://127.0.0.1:8000/ . Tes: `python manage.py test`. **Node tidak diperlu
    dan jangan ikutkan kolom itu saat mengekspor data pelatihan.
 7. Tombol "Dengar" nanti memakai suara bawaan HP bila ada; HP umumnya **tidak punya suara Tetun** → rekam penutur asli lalu unggah di Admin.
 
+## Halaman Belajar (`/belajar/`)
+- **Daftar level**: kartu besar bergambar + progress bar ("Ita aprende ona 5 husi 20").
+- **Halaman level**: kalimat dikelompokkan per Materi; tiap kalimat tampil dalam **Tetun, English, Português, Indonesia** + gambar emoji untuk yang belum lancar membaca.
+- **Rona (dengar)**: memutar file audio Tetun bila Admin sudah mengunggahnya (Admin > Materi > Kalimat). Tombol kecil EN/PT/ID memakai file audio bila ada, jika tidak memakai
+  suara bawaan HP; tombol otomatis mati bila HP tidak punya suara bahasa itu. **Belum ada audio Tetun**, jadi tombol "Rona" mati sampai penutur asli merekamnya (disengaja: HP umumnya tidak punya suara Tetun, dan kami tidak mau memalsukan pengucapan).
+- **Grava ha'u (rekam saya)**: latihan mengucapkan; rekaman **hanya di HP, tidak diunggah**.
+- **Ha'u aprende ona**: menandai kalimat; progres tersimpan di server. Saat offline, tanda dicatat di HP dan dikirim otomatis begitu internet kembali.
+- Kalimat berstatus `draft` menampilkan catatan "belum dicek penutur asli". Ubah status menjadi `terverifikasi` di Admin setelah dicek.
+
+## Halaman Ajuda AI / crowdsource (`/crowdsource/`, hanya group `kontributor` dan `admin`)
+1. Pilih **lian rejionál** (Tetun + semua bahasa daerah yang dicentang "Hatudu iha Ajuda AI" di Admin; tiap tombol menampilkan jumlah suara yang sudah terkumpul).
+2. Pilih **estilu ko'alia**: Preman / Sopan / Profesional (teksnya diatur Admin).
+3. Muncul **1 kalimat** (Tetun besar + arti EN/PT/ID). Kalimat dipilih yang **paling sedikit direkam** untuk bahasa itu dan yang belum pernah direkam user ini (bahasa + gaya sama).
+4. Tekan **tombol mikrofon merah besar** untuk merekam, tekan lagi untuk berhenti, **dengar ulang**, lalu **Haruka (kirim)** atau rekam ulang.
+5. Muncul "Obrigadu! Ita nia lian ajuda AI Timor!" + penghitung ("Iha lian 1 ona ba Fataluku").
+Pilihan bahasa + gaya diingat untuk kunjungan berikutnya.
+
+**Yang disimpan**: bahasa, kalimat, file suara, gaya bicara (+ kode acak pengirim agar Admin bisa memblokir penyalahgunaan). **Tidak diminta**: nama, nomor HP, alamat.
+**Pemeriksaan di server**: harus group kontributor/admin; file diperiksa dari **isinya** (tanda webm/ogg/wav/m4a/mp3), bukan dari nama; maks 2 MB; durasi minimal 0,8 detik; satu rekaman per kalimat+bahasa+gaya
+per pengirim; maks 10 per menit dan 100 per hari per user; nama berkas diacak. **Admin** mendengar, menyetujui/menolak, mengisi transkripsi, dan bisa mematikan pengirim nakal (Admin > Rekaman Lian).
+
+## Catatan keamanan & operasional
+- **Mikrofon hanya jalan di HTTPS atau localhost.** Untuk produksi wajib HTTPS.
+- Suara tersimpan di `media/rekaman_suara/`. Django hanya menyajikan `/media/` saat `DEBUG=1`. Di produksi sajikan lewat nginx **dengan akses terbatas untuk admin** (jangan publik): suara adalah data pengguna.
+- Cache offline dipisah: **berkas statis** (aman) dan **halaman HTML** (bisa memuat progres user). Cache halaman **dihapus saat logout**, supaya HP yang dipakai bergantian tidak membocorkan progres orang sebelumnya.
+- 33 bahasa membuat daftar pilihan cukup panjang; kolom pencarian bisa ditambah nanti.
+
 ## Status
 | Bagian | Status |
 |---|---|
-| Struktur SJDF, `config/decorators.py`, group, models (User, Bahasa, Level, Materi, Kalimat, RekamanSuara, + KarakterAI, Perfil, ProgresBelajar) | Selesai, 39 tes lulus |
+| Struktur SJDF, `config/decorators.py`, group, models | Selesai |
 | `layout.html`, `navbar.html`, menu per group, topbar tais, 4 bahasa, tombol buaya, PWA | Selesai |
-| `home.html`, `login.html` (email/HP + password, tamu), daftar, "Kamu siapa?", akun, daftar utilizador | Selesai |
-| `admin_dashboard.html` (user, suara per bahasa, grafik) + Admin Django (dengar, setujui/tolak, matikan pengirim) | Selesai (dasar) |
-| `belajar.html` (20 kalimat/level, dengar, rekam saya, progress bar) | Belum. Butuh isi kalimat dari penutur asli |
-| `crowdsource.html` (rekam, dengar ulang, kirim, penghitung per bahasa) | Belum |
+| `home.html`, `login.html`, daftar, tamu, "Kamu siapa?", akun, daftar utilizador | Selesai |
+| **`belajar.html`** (daftar level) dan **`level.html`** (kalimat, dengar, rekam saya, progres, offline) | **Selesai** |
+| **`crowdsource.html`** (rekam, dengar ulang, kirim, penghitung) + validasi unggahan + antrean Admin | **Selesai** |
+| `admin_dashboard.html` + Admin Django (dengar, setujui/tolak, matikan pengirim) | Selesai (dasar) |
+| 20 kalimat Level 1 | Ada, tetapi **DRAF AI** (perlu dicek penutur asli) |
+| Level 2-5 (kalimat) | Belum ditulis |
+| Audio Tetun untuk kalimat | Belum (butuh rekaman penutur asli) |
 | `ai_chat.html` (3 karakter, rekam, jawab suara + teks) | Belum |
+| Login Google/Facebook | Belum (butuh kunci dari akun Anda) |

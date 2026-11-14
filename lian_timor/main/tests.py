@@ -67,7 +67,7 @@ class HalamanDanMenu(Dasar):
 		for u in ("/ai/", "/belajar/", "/crowdsource/", "/users/account/"):
 			self.assertIn(f'href="{u}"', html)
 		for n in range(1, 6):
-			self.assertIn(f'?level={n}', html)
+			self.assertIn(f'href="/belajar/nivel/{n}/"', html)
 		self.assertIn('class="fab-bicara"', html)
 		self.assertIn('<html lang="tet"', html)
 
@@ -149,6 +149,12 @@ class LoginTamu(Dasar):
 		self.client.post('/users/peran/', {'peran': 'hacker'})                       # nilai ngawur ditolak
 		self.assertEqual(User.objects.get(username='ana@contoh.com').perfil.peran, 'ibu_pasar')
 
+	def test_logout_membersihkan_cache_halaman_dan_antrean_di_hp(self):
+		self.client.force_login(user_grup('p', 'pelajar'))
+		html = self.client.post('/logout/').content.decode()
+		self.assertIn("indexOf('lian-halaman')", html)
+		self.assertIn('lian_progres_antre', html)
+
 	def test_logout_hanya_post(self):
 		self.client.force_login(user_grup('p', 'pelajar'))
 		self.assertEqual(self.client.get('/logout/').status_code, 405)
@@ -170,6 +176,8 @@ class Pwa(Dasar):
 		isi = sw.content.decode()
 		self.assertIn('/offline/', isi)
 		self.assertIn('(admin|users|report|login|logout|tamu)', isi)     # halaman pribadi tidak disimpan
+		self.assertIn('lian-halaman-', isi)                              # cache HTML terpisah dari cache berkas statis
+		self.assertIn('lian-statik-', isi)
 		self.assertEqual(self.client.get('/offline/').status_code, 200)
 
 	def test_semua_berkas_statis_di_cache_ada(self):

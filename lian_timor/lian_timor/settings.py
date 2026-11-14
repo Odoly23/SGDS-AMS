@@ -94,4 +94,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v1"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v2"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)

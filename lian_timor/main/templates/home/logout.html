@@ -8,3 +8,10 @@
 	<a href="{% url 'login' %}" class="btn-lian merah d-flex align-items-center justify-content-center text-decoration-none" style="text-decoration:none">{% t "btn_login" %}</a>
 </div>
 {% endblock %}
+{% block scripts %}
+<script>
+/* Saat keluar: hapus salinan HALAMAN di HP ini (memuat progres belajar), supaya orang berikutnya yang memakai HP tidak melihatnya. */
+try { if (window.caches) caches.keys().then(function (k) { k.filter(function (n) { return n.indexOf('lian-halaman') === 0; }).forEach(function (n) { caches.delete(n); }); }); } catch (e) {}
+try { localStorage.removeItem('lian_progres_antre'); localStorage.removeItem('lian_cs'); } catch (e) {}
+</script>
+{% endblock %}

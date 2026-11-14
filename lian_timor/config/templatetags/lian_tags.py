@@ -55,3 +55,17 @@ def pesan(teks):
     if teks in i18n.TEKS:
         return _spans(i18n.TEKS[teks])
     return escape(teks)
+
+
+@register.simple_tag
+def tpl(kunci, **awal):
+    """
+    Teks 4 bahasa dengan tempat kosong yang diisi JavaScript, mis. "{n} suara untuk {lian}".
+    Isi awal dari kwargs (dirender server); atribut data-tpl menyimpan templatnya untuk diisi ulang.
+    """
+    bagian = []
+    for kode in i18n.KODE:
+        templat = i18n.TEKS[kunci].get(kode) or i18n.TEKS[kunci]["tet"]
+        isi = templat.format(**awal) if awal else templat
+        bagian.append(format_html('<span class="tx" data-l="{}" data-tpl="{}">{}</span>', kode, templat, isi))
+    return mark_safe("".join(bagian))
