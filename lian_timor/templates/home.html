@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static lian_tags %}
+{% block content %}
+
+{# ===== 4 menu besar: kata yang orang Timor paham, tanpa istilah teknis ===== #}
+<section class="grid grid-cols-2 gap-4" aria-label="Menu">
+  <a href="{% url 'ai_chat' %}" class="kartu-merah flex min-h-[11.5rem] flex-col items-center justify-center gap-2 rounded-3xl p-3 text-center shadow-timbul">
+    <img src="{% static 'img/lafaek.svg' %}" alt="" class="h-20 w-20">
+    <span class="text-lg font-black leading-tight [text-wrap:balance] min-[400px]:text-xl">{% t "menu_talk" %}</span>
+    <span class="text-sm font-semibold opacity-90">{% t "sub_talk" %}</span>
+  </a>
+  <a href="{% url 'belajar' %}" class="kartu-kuning flex min-h-[11.5rem] flex-col items-center justify-center gap-2 rounded-3xl p-3 text-center shadow-timbul">
+    <svg class="h-16 w-16" aria-hidden="true"><use href="#ik-buku"/></svg>
+    <span class="text-lg font-black leading-tight [text-wrap:balance] min-[400px]:text-xl">{% t "menu_learn" %}</span>
+    <span class="text-sm font-semibold">{% t "sub_learn" %}</span>
+  </a>
+  <a href="{% url 'crowdsource' %}" class="kartu-hitam flex min-h-[11.5rem] flex-col items-center justify-center gap-2 rounded-3xl p-3 text-center shadow-timbul">
+    <svg class="h-16 w-16 text-kuning" aria-hidden="true"><use href="#ik-mik"/></svg>
+    <span class="text-lg font-black leading-tight [text-wrap:balance] min-[400px]:text-xl">{% t "menu_help" %}</span>
+    <span class="text-sm font-semibold opacity-90">{% t "sub_help" %}</span>
+  </a>
+  <a href="{% url 'akun' %}" class="kartu-putih flex min-h-[11.5rem] flex-col items-center justify-center gap-2 rounded-3xl p-3 text-center shadow-timbul">
+    <svg class="h-16 w-16 text-merah" aria-hidden="true"><use href="#ik-orang"/></svg>
+    <span class="text-lg font-black leading-tight [text-wrap:balance] min-[400px]:text-xl">{% t "menu_account" %}</span>
+    <span class="text-sm font-semibold text-hitam/70">{% t "sub_account" %}</span>
+  </a>
+</section>
+
+{# ===== Hari ini belajar apa? ===== #}
+<section class="mt-8" aria-labelledby="judul-hari-ini">
+  <h2 id="judul-hari-ini" class="mb-3 text-2xl font-black">{% t "today_title" %}</h2>
+  <ul class="space-y-3">
+    {% for l in levels %}
+    <li>
+      <a href="{% url 'belajar' %}?level={{ l.nomor }}" class="kartu-{{ l.warna }} flex items-center gap-4 rounded-3xl p-3 shadow-timbul">
+        <span class="flex h-20 w-20 flex-none items-center justify-center rounded-2xl bg-white text-5xl ring-4 ring-hitam" aria-hidden="true">{{ l.emoji }}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-extrabold uppercase tracking-wide opacity-80">{% t "level" %} {{ l.nomor }}</span>
+          <span class="block text-xl font-black leading-snug">{% ml l "judul" %}</span>
+          <span class="lencana mt-1">{% if l.total_kalimat %}{% t "kalimat_n" n=l.total_kalimat %}{% else %}{% t "coming_soon_badge" %}{% endif %}</span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<button id="pasang" type="button" class="btn kartu-kuning mt-8 w-full" hidden>{% t "install_hint" %}</button>
+{% endblock %}

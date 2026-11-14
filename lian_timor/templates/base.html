@@ -1,0 +1,81 @@
+{% load static lian_tags %}<!DOCTYPE html>
+<html lang="tet">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lian Timor - Belajar Bahasa Timor-Leste</title>
+  <meta name="description" content="Lian Timor: aprende lian Timor-Leste. Belajar bahasa Timor-Leste.">
+  <meta name="theme-color" content="#C8201A">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" href="{% static 'icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preload" href="{% static 'fonts/nunito-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+  {# Pasang bahasa pilihan SEBELUM halaman tergambar, supaya tidak berkedip #}
+  <script>try{var l=localStorage.getItem('lian_lang');if(['tet','en','pt','id'].indexOf(l)>-1)document.documentElement.lang=l}catch(e){}</script>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen">
+
+  {# ===== Ikon (dipakai ulang lewat <use>) ===== #}
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="ik-uma" viewBox="0 0 32 32"><path d="M4 15 16 4l12 11M7 13v14h18V13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 27v-8h6v8" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></symbol>
+    <symbol id="ik-buku" viewBox="0 0 32 32"><path d="M16 8c-3-2.5-7-3-11-2v18c4-1 8-.5 11 2 3-2.5 7-3 11-2V6c-4-1-8-.5-11 2zM16 8v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="ik-mik" viewBox="0 0 32 32"><rect x="11" y="3" width="10" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6 15a10 10 0 0 0 20 0M16 25v4M11 29h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="ik-orang" viewBox="0 0 32 32"><circle cx="16" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M4 28c1-7 6-10 12-10s11 3 12 10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <a href="#isi" class="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-white focus:p-3 focus:font-bold">{% t "skip" %}</a>
+
+  {# ===== TOPBAR TAIS: muncul di semua halaman. Pita tais penuh + bilah logo/bahasa yang ikut menempel saat scroll ===== #}
+  <div class="tais-faixa" style="height:calc(2.75rem + env(safe-area-inset-top))" role="presentation"></div>
+  <header class="sticky top-0 z-40 bg-white shadow-lembut" style="padding-top:env(safe-area-inset-top)">
+    <div class="mx-auto flex h-16 max-w-xl items-center justify-between gap-2 px-3">
+      <a href="{% url 'home' %}" class="flex min-h-[2.75rem] min-w-0 items-center gap-2" aria-label="Lian Timor">
+        <img src="{% static 'img/lafaek.svg' %}" alt="" width="40" height="40" class="h-8 w-8 min-[400px]:h-10 min-[400px]:w-10">
+        <span class="text-base font-black leading-none tracking-tight text-merah min-[400px]:text-2xl">Lian <span class="text-hitam">Timor</span></span>
+      </a>
+      <div class="flex flex-none items-center gap-0.5 rounded-xl bg-hitam p-1 min-[400px]:gap-1" role="group" {% tattr "lang_label" %}>
+        <button type="button" data-set-lang="tet" class="lang-btn" aria-label="Tetun">TET</button>
+        <button type="button" data-set-lang="en" class="lang-btn" aria-label="English">EN</button>
+        <button type="button" data-set-lang="pt" class="lang-btn" aria-label="Português">PT</button>
+        <button type="button" data-set-lang="id" class="lang-btn" aria-label="Bahasa Indonesia">ID</button>
+      </div>
+    </div>
+    <div class="tais-garis"></div>
+  </header>
+
+  <main id="isi" class="mx-auto w-full max-w-xl px-4 pb-40 pt-5">
+    {% block content %}{% endblock %}
+  </main>
+
+  {# ===== MENU BAWAH: tombol BICARA (buaya) besar di tengah ===== #}
+  <nav class="fixed inset-x-0 bottom-0 z-40 bg-white shadow-[0_-4px_14px_rgba(27,20,17,.18)]" style="padding-bottom:env(safe-area-inset-bottom)" aria-label="Menu">
+    <div class="tais-garis"></div>
+    <div class="mx-auto flex max-w-xl items-end px-1">
+      <a href="{% url 'home' %}" class="nav-item" {% if request.resolver_match.url_name == 'home' %}aria-current="page"{% endif %}>
+        <svg class="h-8 w-8" aria-hidden="true"><use href="#ik-uma"/></svg><span>{% t "nav_home" %}</span></a>
+      <a href="{% url 'belajar' %}" class="nav-item" {% if request.resolver_match.url_name == 'belajar' %}aria-current="page"{% endif %}>
+        <svg class="h-8 w-8" aria-hidden="true"><use href="#ik-buku"/></svg><span>{% t "nav_learn" %}</span></a>
+
+      <div class="flex flex-1 flex-col items-center">
+        {% block bicara %}
+        <a href="{% url 'ai_chat' %}" class="bicara" {% tattr "nav_talk" %}>
+          <img src="{% static 'img/lafaek.svg' %}" alt="" class="h-14 w-14 min-[400px]:h-16 min-[400px]:w-16">
+        </a>
+        {% endblock %}
+        <span class="whitespace-nowrap pb-2 pt-1 text-[0.62rem] font-extrabold text-merah min-[400px]:text-sm">{% t "nav_talk" %}</span>
+      </div>
+
+      <a href="{% url 'crowdsource' %}" class="nav-item" {% if request.resolver_match.url_name == 'crowdsource' %}aria-current="page"{% endif %}>
+        <svg class="h-8 w-8" aria-hidden="true"><use href="#ik-mik"/></svg><span>{% t "nav_help" %}</span></a>
+      <a href="{% url 'akun' %}" class="nav-item" {% if request.resolver_match.url_name == 'akun' %}aria-current="page"{% endif %}>
+        <svg class="h-8 w-8" aria-hidden="true"><use href="#ik-orang"/></svg><span>{% t "nav_account" %}</span></a>
+    </div>
+  </nav>
+
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

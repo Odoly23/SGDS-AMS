@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load static lian_tags %}
+{% block content %}
+<section class="mt-6 flex flex-col items-center gap-4 text-center">
+  <img src="{% static 'img/lafaek.svg' %}" alt="" class="h-40 w-40 grayscale">
+  <h1 class="text-3xl font-black">{% t "offline_title" %}</h1>
+  <p class="text-xl font-semibold">{% t "offline_text" %}</p>
+  <a href="{% url 'home' %}" class="btn kartu-kuning w-full">{% t "back_home" %}</a>
+</section>
+{% endblock %}

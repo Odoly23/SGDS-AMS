@@ -1,0 +1,17 @@
+{% load static %}{
+  "name": "Lian Timor - Belajar Bahasa Timor Leste",
+  "short_name": "Lian Timor",
+  "description": "Aprende lian Timor-Leste. Belajar bahasa Timor-Leste.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF6E5",
+  "theme_color": "#C8201A",
+  "lang": "tet",
+  "icons": [
+    {"src": "{% static 'icons/icon-192.png' %}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "{% static 'icons/icon-512.png' %}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "{% static 'icons/icon-maskable-512.png' %}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

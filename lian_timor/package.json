@@ -1,0 +1,12 @@
+{
+  "name": "lian-timor",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i src/input.css -o static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i src/input.css -o static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@fontsource-variable/nunito": "^5.2.0",
+    "tailwindcss": "3.4.17"
+  }
+}
