@@ -1,0 +1,10 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="main-content mx-auto text-center" style="max-width:440px">
+	<img class="maskot" src="{% static 'main/images/lafaek.svg' %}" alt="" style="filter:grayscale(1)">
+	<h1 class="judul-halaman mt-0">{% t "offline_title" %}</h1>
+	<p>{% t "offline_text" %}</p>
+	<a href="{% url 'home' %}" class="btn-lian kuning d-flex align-items-center justify-content-center" style="text-decoration:none">{% t "back_home" %}</a>
+</div>
+{% endblock %}

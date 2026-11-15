@@ -1,0 +1,17 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="main-content mx-auto text-center" style="max-width:440px">
+	<img class="maskot" src="{% static 'main/images/lafaek.svg' %}" alt="">
+	<h1 class="judul-halaman mt-0">{% t "logout_title" %}</h1>
+	<p>{% t "logout_text" %}</p>
+	<a href="{% url 'login' %}" class="btn-lian merah d-flex align-items-center justify-content-center text-decoration-none" style="text-decoration:none">{% t "btn_login" %}</a>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+/* Saat keluar: hapus salinan HALAMAN di HP ini (memuat progres belajar), supaya orang berikutnya yang memakai HP tidak melihatnya. */
+try { if (window.caches) caches.keys().then(function (k) { k.filter(function (n) { return n.indexOf('lafex-halaman') === 0 || n.indexOf('lian-halaman') === 0; }).forEach(function (n) { caches.delete(n); }); }); } catch (e) {}
+try { localStorage.removeItem('lafex_progres_antre'); localStorage.removeItem('lafex_cs'); } catch (e) {}
+</script>
+{% endblock %}
