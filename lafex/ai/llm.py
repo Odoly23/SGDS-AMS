@@ -10,6 +10,8 @@ Model diminta menjawab HANYA berupa JSON {"tet": ..., "en": ..., "koreksi": ...}
 """
 import json
 import re
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -151,6 +153,36 @@ def _anthropic(sistem, pesan):
 	return _hasil_dari_teks(teks, **ekstra)
 
 
+# ----------------------------------------------------------------------- local (model gratis/open-source)
+def _lokal(sistem, pesan):
+	"""Model open-source (Gemma, Llama, Qwen, dll, + LoRA hasil latihan Anda) lewat server yang kompatibel OpenAI:
+	Ollama, llama.cpp (llama-server), vLLM, LM Studio, atau layanan gratis seperti Groq/OpenRouter. Tanpa paket tambahan."""
+	cfg = settings.AI
+	if not cfg['LOCAL_URL']:
+		raise AIGagal('AI belum dikonfigurasi.')
+	badan = {'model': cfg['LOCAL_MODEL'], 'messages': [{'role': 'system', 'content': sistem}] + pesan,
+	         'max_tokens': cfg['MAX_TOKENS'], 'temperature': cfg['LOCAL_SUHU'], 'stream': False}
+	header = {'Content-Type': 'application/json'}
+	if cfg['LOCAL_KUNCI']:
+		header['Authorization'] = 'Bearer ' + cfg['LOCAL_KUNCI']
+	req = urllib.request.Request(cfg['LOCAL_URL'].rstrip('/') + '/chat/completions', data=json.dumps(badan).encode(), headers=header)
+	try:
+		with urllib.request.urlopen(req, timeout=cfg['LOCAL_TIMEOUT']) as r:
+			data = json.loads(r.read().decode('utf-8'))
+		teks = (data['choices'][0]['message'].get('content') or '').strip()
+	except urllib.error.HTTPError as e:
+		raise AIGagal('AI sedang ramai.' if e.code == 429 else 'AI sedang bermasalah.')
+	except (urllib.error.URLError, TimeoutError, OSError):
+		raise AIGagal('Tidak bisa terhubung ke AI.')
+	except (ValueError, KeyError, IndexError, AttributeError):
+		raise AIGagal('AI sedang bermasalah.')
+	if not teks:
+		raise AIGagal('AI tidak memberi jawaban.')
+	pakai = data.get('usage') or {}
+	return _hasil_dari_teks(teks, token_masuk=pakai.get('prompt_tokens') or 0, token_keluar=pakai.get('completion_tokens') or 0,
+	                        model=cfg['LOCAL_MODEL'])
+
+
 def jawab(karakter, peran, riwayat, ucapan, bahasa_ucap):
 	"""riwayat = daftar Giliran terdahulu (lama -> baru). Return Hasil. Raise AIGagal bila gagal."""
 	if settings.AI['BACKEND'] == 'dummy':
@@ -160,4 +192,7 @@ def jawab(karakter, peran, riwayat, ucapan, bahasa_ucap):
 		pesan.append({'role': 'user', 'content': g.ucapan})
 		pesan.append({'role': 'assistant', 'content': json.dumps({'tet': g.jawab_tet, 'en': g.jawab_en, 'koreksi': g.koreksi, 'gerak': g.gerak}, ensure_ascii=False)})
 	pesan.append({'role': 'user', 'content': ucapan})
-	return _anthropic(bangun_sistem(karakter, peran, bahasa_ucap), pesan)
+	sistem = bangun_sistem(karakter, peran, bahasa_ucap)
+	if settings.AI['BACKEND'] == 'local':
+		return _lokal(sistem, pesan)
+	return _anthropic(sistem, pesan)

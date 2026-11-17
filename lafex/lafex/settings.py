@@ -97,11 +97,16 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
 PWA_VERSI = "v5"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
 
 # ---------- Percakapan suara dengan AI (ai_chat) ----------
-# BACKEND: "dummy" = balasan contoh tanpa biaya (untuk mencoba/uji) | "anthropic" = model berbayar lewat API (Anda membayar per token).
+# BACKEND: "dummy" = balasan contoh | "local" = model gratis/open-source (Gemma dll, server Ollama/llama.cpp/vLLM) | "anthropic" = model berbayar lewat API (Anda membayar per token).
 # Kunci API HANYA di server (.env), tidak pernah dikirim ke browser.
 AI = {
 	"BACKEND": os.getenv("AI_BACKEND", "dummy"),
 	"ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", ""),
+	"LOCAL_URL": os.getenv("LOCAL_LLM_URL", "http://127.0.0.1:11434/v1"),   # Ollama bawaan; llama-server: http://127.0.0.1:8080/v1
+	"LOCAL_MODEL": os.getenv("LOCAL_LLM_MODEL", "gemma2:2b"),               # nama model di server Anda (mis. hasil LoRA Anda: "lafex-gemma")
+	"LOCAL_KUNCI": os.getenv("LOCAL_LLM_KEY", ""),                          # kosong untuk server sendiri
+	"LOCAL_SUHU": float(os.getenv("LOCAL_LLM_SUHU", "0.7")),
+	"LOCAL_TIMEOUT": int(os.getenv("LOCAL_LLM_TIMEOUT", "60")),
 	"MODEL": os.getenv("ANTHROPIC_MODEL", "claude-opus-5-5"),
 	"EFFORT": os.getenv("ANTHROPIC_EFFORT", "low"),                 # low = paling hemat; kosongkan bila model tidak mendukung
 	"MAX_TOKENS": int(os.getenv("ANTHROPIC_MAX_TOKENS", "1500")),   # termasuk token "berpikir"

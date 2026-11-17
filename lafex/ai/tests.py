@@ -281,3 +281,48 @@ class KarakterBaru(Dasar):
 			self.assertIn(f'.gerak.gerak-{g}', css, g)
 		for gaya in ('preman', 'sopan', 'profesional'):
 			self.assertIn(f'[data-keadaan="bicara"][data-gaya="{gaya}"]', css)
+
+
+class ModelLokal(Dasar):
+	"""Backend 'local': server kompatibel OpenAI (Ollama/llama.cpp/vLLM). Dipalsukan, tidak ada jaringan sungguhan."""
+
+	def _balasan(self, isi, status=200):
+		import io
+		import urllib.error
+		if status != 200:
+			return urllib.error.HTTPError('http://x', status, 'x', {}, io.BytesIO(b''))
+		resp = mock.MagicMock()
+		resp.__enter__.return_value.read.return_value = json.dumps(
+			{'choices': [{'message': {'content': isi}}], 'usage': {'prompt_tokens': 12, 'completion_tokens': 7}}).encode()
+		return resp
+
+	def test_jawaban_json_dibaca(self):
+		isi = '{"tet": "Bondia!", "en": "Good morning!", "koreksi": "", "gerak": "lambai"}'
+		with ai_cfg(BACKEND='local'), mock.patch('urllib.request.urlopen', return_value=self._balasan(isi)) as m:
+			h = llm.jawab(KarakterAI.objects.first(), '', [], 'bondia', 'tet')
+		self.assertEqual((h.tet, h.gerak, h.token_masuk, h.token_keluar), ('Bondia!', 'lambai', 12, 7))
+		self.assertEqual(m.call_args[0][0].full_url, settings.AI['LOCAL_URL'].rstrip('/') + '/chat/completions')
+
+	def test_server_mati_atau_error_menjadi_AIGagal(self):
+		import urllib.error
+		with ai_cfg(BACKEND='local'):
+			for efek in (urllib.error.URLError('mati'), self._balasan('', 500), self._balasan('', 429)):
+				with mock.patch('urllib.request.urlopen', side_effect=efek):
+					with self.assertRaises(llm.AIGagal):
+						llm.jawab(KarakterAI.objects.first(), '', [], 'halo', 'tet')
+
+	def test_tanpa_url_ditolak(self):
+		with ai_cfg(BACKEND='local', LOCAL_URL=''):
+			with self.assertRaises(llm.AIGagal):
+				llm.jawab(KarakterAI.objects.first(), '', [], 'halo', 'tet')
+
+	def test_export_finetune(self):
+		import os
+		import tempfile
+		path = os.path.join(tempfile.mkdtemp(), 't.jsonl')
+		call_command('seed_level1', verbosity=0)
+		call_command('export_finetune', out=path, semua=True, stdout=mock.MagicMock())
+		baris = [json.loads(b) for b in open(path, encoding='utf-8')]
+		self.assertTrue(baris)
+		self.assertEqual([m['role'] for m in baris[0]['messages']], ['system', 'user', 'assistant'])
+		json.loads(baris[0]['messages'][2]['content'])               # jawaban berformat JSON aplikasi
