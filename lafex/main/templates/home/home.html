@@ -18,13 +18,20 @@
 			<span class="sub">{% t "sub_learn" %}</span>
 		</a>
 	</div>
-	{# "Ajuda AI" (latih AI): hanya admin & kontributor. Siswa tidak perlu. #}
-	{% if group == 'admin' or group == 'kontributor' %}
+	{# "Ajuda AI" (merekam): hanya kontributor. Admin meninjau rekaman. Siswa tidak perlu keduanya. #}
+	{% if group == 'kontributor' %}
 	<div class="col-6 mb-4">
 		<a href="{% url 'crowdsource-home' %}" class="kartu kartu-hitam menu-kartu h-100">
 			<i class="fa fa-microphone" aria-hidden="true" style="color:var(--kuning)"></i>
 			<span class="judul">{% t "menu_help" %}</span>
 			<span class="sub">{% t "sub_help" %}</span>
+		</a>
+	</div>
+	{% elif group == 'admin' %}
+	<div class="col-6 mb-4">
+		<a href="{% url 'crowdsource-tinjau' %}" class="kartu kartu-hitam menu-kartu h-100">
+			<i class="fa fa-headphones" aria-hidden="true" style="color:var(--kuning)"></i>
+			<span class="judul">{% t "nav_review" %}</span>
 		</a>
 	</div>
 	{% endif %}

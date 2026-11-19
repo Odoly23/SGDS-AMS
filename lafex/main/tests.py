@@ -71,9 +71,14 @@ class HalamanDanMenu(Dasar):
 			self.assertIn(f'href="/belajar/nivel/{n}/"', html)
 		self.assertIn('class="fab-bicara"', html)
 		self.assertIn('<html lang="tet"', html)
-		for g in ('kontributor', 'admin'):
-			self.client.force_login(user_grup(f'k-{g}', g))
-			self.assertIn('href="/crowdsource/"', self.client.get('/').content.decode(), g)
+		self.client.force_login(user_grup('k-kon', 'kontributor'))
+		html = self.client.get('/').content.decode()
+		self.assertIn('href="/crowdsource/"', html)                      # kontributor merekam
+		self.assertIn('href="/crowdsource/kontribusiku/"', html)
+		self.client.force_login(user_grup('k-adm', 'admin'))
+		html = self.client.get('/').content.decode()
+		self.assertIn('href="/crowdsource/tinjau/"', html)               # admin meninjau, tidak merekam
+		self.assertNotIn('href="/crowdsource/"', html)
 
 	def test_pembatasan_group(self):
 		self.client.force_login(user_grup('p', 'pelajar'))

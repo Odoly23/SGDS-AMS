@@ -1,0 +1,41 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block bicara %}{% endblock %}
+{% block content %}
+<h1 class="judul-halaman mt-0 text-center">{% t "mine_title" %}</h1>
+<p class="text-center font-weight-bold">{% t "mine_thanks" %}</p>
+
+<div class="row text-center mb-3">
+	<div class="col-6 col-md-3 mb-3"><div class="kartu kartu-hitam p-3"><span class="judul" style="font-size:2rem">{{ total }}</span><span class="sub">{% t "mine_total" %}</span></div></div>
+	<div class="col-6 col-md-3 mb-3"><div class="kartu kartu-kuning p-3"><span class="judul" style="font-size:2rem">{{ menunggu }}</span><span class="sub">{% t "mine_wait" %}</span></div></div>
+	<div class="col-6 col-md-3 mb-3"><div class="kartu kartu-putih p-3"><span class="judul" style="font-size:2rem">{{ disetujui }}</span><span class="sub">{% t "mine_ok" %}</span></div></div>
+	<div class="col-6 col-md-3 mb-3"><div class="kartu kartu-merah p-3"><span class="judul" style="font-size:2rem">{{ ditolak }}</span><span class="sub">{% t "mine_no" %}</span></div></div>
+</div>
+
+<a href="{% url 'crowdsource-home' %}" class="kartu kartu-merah kartu-level w-100 mb-3 text-decoration-none"><span class="gambar"><i class="fa fa-microphone" style="color:var(--navy)"></i></span><span class="flex-fill"><span class="judul">{% t "nav_help" %}</span></span></a>
+
+{% if per_bahasa %}
+<h2 class="judul-langkah">{% t "mine_by_lang" %}</h2>
+<ul class="list-group mb-3">
+	{% for b in per_bahasa %}<li class="list-group-item d-flex justify-content-between"><strong>{{ b.bahasa__nama }}</strong><span><i class="fa fa-microphone"></i> {{ b.n }}</span></li>{% endfor %}
+</ul>
+{% endif %}
+
+<h2 class="judul-langkah">{% t "mine_last" %}</h2>
+{% if terakhir %}
+<div class="main-content p-2 table-responsive">
+	<table class="table table-sm mb-0">
+		{% for r in terakhir %}
+		<tr>
+			<td>{{ r.kalimat.teks_tet|truncatechars:60 }}<br><small>{{ r.bahasa.nama }} · {{ r.gaya.nama_tet }} · {{ r.datetime|date:"d/m/Y" }}</small>
+				{% if r.status == 'ditolak' and r.alasan_tolak %}<br><small class="text-danger">{% t "mine_reason" %}: {{ r.alasan_tolak }}</small>{% endif %}</td>
+			<td class="text-right">{% if r.status == 'disetujui' %}<span class="badge badge-success">{% t "mine_ok" %}</span>{% elif r.status == 'ditolak' %}<span class="badge badge-danger">{% t "mine_no" %}</span>{% else %}<span class="badge badge-warning">{% t "mine_wait" %}</span>{% endif %}</td>
+		</tr>
+		{% endfor %}
+	</table>
+</div>
+{% else %}
+<p class="text-center">{% t "mine_none" %}</p>
+{% endif %}
+<p class="text-center small mt-3">{% t "mine_note" %}</p>
+{% endblock %}

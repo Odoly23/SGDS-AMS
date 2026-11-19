@@ -153,7 +153,12 @@ class Unggah(TestCase):
 		self.assertNotIn('id="cs"', self.client.get('/crowdsource/').content.decode())
 		self.assertEqual(self._kirim().status_code, 200)                                          # halaman 404 pola SJDF
 		self.assertEqual(RekamanSuara.objects.count(), 0)                                         # tapi TIDAK ada rekaman tersimpan
-		self.client.force_login(user_grup('a', 'admin'))
+		self.client.force_login(user_grup('a', 'admin'))                                         # admin tidak merekam, hanya meninjau
+		self.assertIn('Página não encontrada', self.client.get('/crowdsource/').content.decode())
+		self.assertIn('Página não encontrada', self.client.get('/crowdsource/kontribusiku/').content.decode())
+		self.assertEqual(self._kirim().status_code, 200)
+		self.assertEqual(RekamanSuara.objects.count(), 0)
+		self.client.force_login(self.k)
 		self.assertEqual(self._kirim().json()['ok'], True)
 		self.client.logout()
 		self.assertEqual(self.client.post('/crowdsource/kirim/').status_code, 302)               # belum login
@@ -268,3 +273,98 @@ class Unggah(TestCase):
 		self.assertEqual(self._berikut().json()['total'], 1)
 		RekamanSuara.objects.update(status='ditolak')
 		self.assertEqual(self._berikut().json()['total'], 0)
+
+
+class KontribusikuDanTinjau(Unggah):
+	"""Halaman kontributor 'Kontribusiku' dan halaman admin 'Tinjau' (bukan admin Django)."""
+
+	def setUp(self):
+		super().setUp()
+		self.adm = user_grup('adm1', 'admin')
+
+	def _buat(self, kontributor, status='menunggu', **kw):
+		with override_settings(MEDIA_ROOT=self.media):
+			return RekamanSuara.objects.create(
+				kalimat=self.kal, bahasa=Bahasa.objects.get(kode='fataluku'), gaya=KarakterAI.objects.get(kode='sopan'), status=status,
+				audio=SimpleUploadedFile('x.webm', WEBM, content_type='audio/webm'), pengirim_kode=kontributor.perfil.kode_anonim, **kw)
+
+	def test_kontribusiku_hanya_milik_sendiri_dan_tanpa_data_pribadi(self):
+		lain = user_grup('orang-lain', 'kontributor')
+		self._buat(self.k, 'disetujui')
+		self._buat(self.k, 'ditolak', alasan_tolak='terlalu bising')
+		self._buat(self.k)
+		self._buat(lain)
+		r = self.client.get('/crowdsource/kontribusiku/')
+		self.assertEqual((r.context['total'], r.context['disetujui'], r.context['ditolak'], r.context['menunggu']), (3, 1, 1, 1))
+		html = r.content.decode()
+		self.assertIn('terlalu bising', html)
+		self.assertNotIn('orang-lain', html)
+		self.assertNotIn(lain.perfil.kode_anonim, html)
+		self.assertNotIn('<audio', html)
+
+	def test_pelajar_dan_anonim_tidak_boleh(self):
+		self.client.force_login(user_grup('p', 'pelajar'))
+		for u in ('/crowdsource/kontribusiku/', '/crowdsource/tinjau/', '/crowdsource/audio/1/'):
+			self.assertIn('Página não encontrada', self.client.get(u).content.decode(), u)
+		self.client.logout()
+		self.assertEqual(self.client.get('/crowdsource/tinjau/').status_code, 302)
+
+	def test_kontributor_tidak_boleh_meninjau(self):
+		r = self._buat(self.k)
+		for url, method in (('/crowdsource/tinjau/', 'get'), (f'/crowdsource/audio/{r.pk}/', 'get')):
+			self.assertIn('Página não encontrada', getattr(self.client, method)(url).content.decode())
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'setujui'})
+		r.refresh_from_db()
+		self.assertEqual(r.status, 'menunggu')
+
+	def test_admin_melihat_dan_memfilter(self):
+		a = self._buat(self.k)
+		self._buat(self.k, 'disetujui')
+		self.client.force_login(self.adm)
+		r = self.client.get('/crowdsource/tinjau/')
+		self.assertEqual([x.pk for x in r.context['halaman']], [a.pk])
+		self.assertContains(r, f'/crowdsource/audio/{a.pk}/')
+		self.assertEqual(len(self.client.get('/crowdsource/tinjau/?status=semua').context['halaman']), 2)
+		self.assertEqual(len(self.client.get('/crowdsource/tinjau/?status=ngawur').context['halaman']), 1)   # nilai tak dikenal -> menunggu
+		self.assertNotContains(r, self.k.perfil.kode_anonim)                                                  # kode samaran tidak ditampilkan
+
+	def test_admin_setujui_tolak_transkripsi(self):
+		r = self._buat(self.k)
+		self.client.force_login(self.adm)
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'transkripsi', 'transkripsi': 'bondia'})
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'setujui'})
+		r.refresh_from_db()
+		self.assertEqual((r.status, r.transkripsi, r.ditinjau_oleh), ('disetujui', 'bondia', self.adm))
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'tolak', 'alasan': 'bising'})
+		r.refresh_from_db()
+		self.assertEqual((r.status, r.alasan_tolak), ('ditolak', 'bising'))
+		self.assertEqual(self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'hapus'}).status_code, 404)
+		self.assertEqual(self.client.get(f'/crowdsource/tinjau/{r.pk}/').status_code, 405)
+
+	def test_matikan_pengirim_tolak_yang_menunggu_dan_admin_aman(self):
+		a = self._buat(self.k)
+		b = self._buat(self.k)
+		self.client.force_login(self.adm)
+		self.client.post(f'/crowdsource/tinjau/{a.pk}/', {'aksi': 'matikan'})
+		self.k.refresh_from_db()
+		self.assertFalse(self.k.is_active)
+		b.refresh_from_db()
+		self.assertEqual((b.status, b.alasan_tolak), ('ditolak', 'Pengirim dimatikan'))
+		adm2 = user_grup('adm2', 'admin')
+		c = self._buat(adm2)
+		self.client.post(f'/crowdsource/tinjau/{c.pk}/', {'aksi': 'matikan'})
+		adm2.refresh_from_db()
+		self.assertTrue(adm2.is_active)                                                                     # admin tidak bisa dimatikan
+
+	def test_audio_hanya_admin_dan_tidak_ada_open_redirect(self):
+		r = self._buat(self.k)
+		self.client.force_login(self.adm)
+		with override_settings(MEDIA_ROOT=self.media):
+			resp = self.client.get(f'/crowdsource/audio/{r.pk}/')
+			self.assertEqual(resp.status_code, 200)
+			self.assertEqual(b''.join(resp.streaming_content), WEBM)
+		for tujuan in ('https://jahat.example/', '//jahat.example/', '/crowdsource/tinjau//jahat.example'):
+			resp = self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'transkripsi', 'transkripsi': 'x', 'kembali': tujuan})
+			self.assertEqual(resp['Location'], '/crowdsource/tinjau/', tujuan)
+		resp = self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'transkripsi', 'transkripsi': 'x', 'kembali': '/crowdsource/tinjau/?status=semua'})
+		self.assertEqual(resp['Location'], '/crowdsource/tinjau/?status=semua')

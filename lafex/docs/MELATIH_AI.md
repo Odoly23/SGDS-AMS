@@ -29,3 +29,12 @@ gabungkan adapter ke model, ubah ke GGUF, lalu daftarkan di Ollama (`ollama crea
 - Format jawaban harus JSON (`tet,en,koreksi,gerak`); model kecil kadang melanggarnya: aplikasi memakai parser toleran, tapi giliran gagal tidak dihitung.
 - Suara (rekaman crowdsource) baru berguna bila ada model ucapan-ke-teks yang dilatih (mis. Whisper); itu proyek terpisah dari model teks.
 - Belum diuji dengan server model sungguhan di lingkungan ini.
+
+## Skala: ribuan pengguna per hari
+Model gratis tidak dibatasi jumlah pengguna, tapi dibatasi **komputer yang menjalankannya**. Perkiraan kasar (belum diukur di sini):
+- Batas aplikasi: 40 giliran/hari/pengguna (10 untuk tamu). 2.000 pengguna aktif ≈ 20.000-80.000 giliran/hari; jam sibuk ≈ 1-3 giliran/detik.
+- Satu giliran ≈ 300-600 token. Model 2B-9B di satu GPU 24 GB dengan **vLLM** (batching) kira-kira puluhan giliran per detik, jadi satu server GPU cukup untuk ribuan pengguna/hari. **Ollama** menangani permintaan hampir satu per satu: bagus untuk uji coba, kurang cocok untuk ribuan pengguna.
+- Tanpa GPU (CPU saja), model 2B hanya melayani beberapa pengguna bersamaan dan jawabannya lambat.
+- Gunakan `AI_BACKEND=local` yang menunjuk ke vLLM (`LOCAL_LLM_URL=http://server-gpu:8000/v1`), jalankan Django dengan gunicorn beberapa worker + PostgreSQL + Redis (cache pembatas kecepatan memakai cache Django; pada lebih dari satu proses pakai Redis, bukan cache bawaan per-proses).
+- Naikkan `LOCAL_LLM_TIMEOUT` hanya bila perlu; model mati/ramai tidak menghabiskan jatah pengguna (giliran gagal tidak dihitung).
+- Sebelum diluncurkan, ukur dengan uji beban (mis. locust) pada server Anda sendiri.

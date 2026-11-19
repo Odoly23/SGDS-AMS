@@ -3,8 +3,11 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db.models import Count, Q
-from django.http import JsonResponse
-from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from django.http import FileResponse, Http404, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
@@ -16,7 +19,7 @@ from crowdsource.utils import jenis_audio
 from custom.models import Bahasa, KarakterAI
 from users.models import Perfil
 
-BOLEH = [GRUP_ADMIN, GRUP_KONTRIBUTOR]          # hanya group kontributor (dan admin)
+BOLEH = [GRUP_KONTRIBUTOR]          # HANYA kontributor yang merekam. Admin tidak merekam: admin meninjau (halaman Tinjau)
 MAKS_PER_MENIT, MAKS_PER_HARI = 10, 100
 DURASI_MIN, DURASI_MAKS = 0.8, 120.0
 
@@ -41,7 +44,7 @@ def _kalimat_boleh():
 @login_required
 @allowed_users(allowed_roles=BOLEH)
 def CrowdsourceHome(request):
-	"""'Latih AI': hanya group kontributor dan admin. Siswa (pelajar) tidak perlu: tidak ada menu, dan halaman ini menampilkan 404."""
+	"""'Latih AI': hanya group kontributor. Siswa (pelajar) dan admin tidak merekam: tidak ada menu, dan halaman ini menampilkan 404."""
 	context = {
 		'group': nama_grup(request.user), 'page': 'crowdsource', 'title': 'Ajuda AI',
 		'bahasa_list': _bahasa_aktif().annotate(n=Count('rekaman', filter=~Q(rekaman__status='ditolak'))),
@@ -116,3 +119,90 @@ def Kirim(request):
 		return galat('berkas ditolak')
 	r.save()
 	return JsonResponse({'ok': True, 'total': _total(bahasa), 'bahasa': bahasa.nama})
+
+
+@login_required
+@allowed_users(allowed_roles=BOLEH)
+def Kontribusiku(request):
+	"""Kontributor melihat hasil kerjanya sendiri: jumlah per status, per bahasa, dan alasan bila ditolak. Tanpa data orang lain."""
+	milik = RekamanSuara.objects.filter(pengirim_kode=_kode(request.user))
+	hitung = {r['status']: r['n'] for r in milik.values('status').annotate(n=Count('id'))}
+	per_bahasa = milik.exclude(status='ditolak').values('bahasa__nama').annotate(n=Count('id')).order_by('-n')
+	context = {
+		'group': nama_grup(request.user), 'page': 'mine', 'title': 'Ha\'u nia kontribuisaun',
+		'total': sum(hitung.values()), 'menunggu': hitung.get('menunggu', 0), 'disetujui': hitung.get('disetujui', 0),
+		'ditolak': hitung.get('ditolak', 0), 'per_bahasa': per_bahasa,
+		'terakhir': milik.select_related('bahasa', 'kalimat', 'gaya').order_by('-datetime')[:30],
+	}
+	return render(request, 'crowdsource/kontribusiku.html', context)
+
+
+# ------------------------------------------------------------------ Tinjau (khusus admin, BUKAN admin Django)
+ADMIN = [GRUP_ADMIN]
+
+
+@login_required
+@allowed_users(allowed_roles=ADMIN)
+def Tinjau(request):
+	"""Admin meninjau rekaman: dengar, setujui/tolak, isi transkripsi, matikan pengirim nakal."""
+	status = request.GET.get('status', 'menunggu')
+	if status not in ('menunggu', 'disetujui', 'ditolak', 'semua'):
+		status = 'menunggu'
+	qs = RekamanSuara.objects.select_related('bahasa', 'kalimat', 'gaya')
+	if status != 'semua':
+		qs = qs.filter(status=status)
+	bahasa = request.GET.get('bahasa', '')
+	if bahasa:
+		qs = qs.filter(bahasa__kode=bahasa)
+	hal = Paginator(qs.order_by('datetime'), 15).get_page(request.GET.get('hal'))
+	context = {
+		'group': nama_grup(request.user), 'page': 'tinjau', 'title': 'Revisaun audio', 'status': status, 'bahasa': bahasa,
+		'halaman': hal, 'bahasa_list': Bahasa.objects.filter(rekaman__isnull=False).distinct(),
+		'jumlah': {s: RekamanSuara.objects.filter(status=s).count() for s in ('menunggu', 'disetujui', 'ditolak')},
+	}
+	return render(request, 'crowdsource/tinjau.html', context)
+
+
+def _kembali(request):
+	"""Kembali ke daftar (dengan filter yang sama). Hanya alamat dalam halaman Tinjau yang diterima (tanpa open redirect)."""
+	tujuan = request.POST.get('kembali', '')
+	if tujuan.startswith('/crowdsource/tinjau/') and '//' not in tujuan and '\\' not in tujuan:
+		return redirect(tujuan)
+	return redirect('crowdsource-tinjau')
+
+
+@login_required
+@allowed_users(allowed_roles=ADMIN)
+@require_POST
+def TinjauAksi(request, pk):
+	r = get_object_or_404(RekamanSuara, pk=pk)
+	aksi = request.POST.get('aksi', '')
+	if aksi == 'setujui':
+		r.tinjau('disetujui', request.user)
+	elif aksi == 'tolak':
+		r.tinjau('ditolak', request.user, request.POST.get('alasan', '').strip()[:200] or 'Ditolak admin')
+	elif aksi == 'transkripsi':
+		r.transkripsi = request.POST.get('transkripsi', '').strip()[:1000]
+		r.save(update_fields=['transkripsi'])
+	elif aksi == 'matikan':
+		# nonaktifkan akun pengirim (kecuali admin) dan tolak semua rekamannya yang masih menunggu
+		ids = Perfil.objects.filter(kode_anonim=r.pengirim_kode).values_list('user_id', flat=True) if r.pengirim_kode else []
+		n = User.objects.filter(id__in=ids, is_superuser=False).exclude(groups__name=GRUP_ADMIN).update(is_active=False)
+		if r.pengirim_kode:
+			RekamanSuara.objects.filter(pengirim_kode=r.pengirim_kode, status='menunggu').update(status='ditolak', alasan_tolak='Pengirim dimatikan')
+		messages.warning(request, 'msg_sender_off' if n else 'err_admin_protect')
+		return _kembali(request)
+	else:
+		raise Http404
+	messages.success(request, 'msg_saved')
+	return _kembali(request)
+
+
+@login_required
+@allowed_users(allowed_roles=ADMIN)
+def Audio(request, pk):
+	"""Suara hanya bisa didengar admin lewat sini (berkas tidak dibuka umum)."""
+	r = get_object_or_404(RekamanSuara, pk=pk)
+	if not r.audio:
+		raise Http404
+	return FileResponse(r.audio.open('rb'), content_type=r.mime_type or 'application/octet-stream')
