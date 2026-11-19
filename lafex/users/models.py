@@ -37,3 +37,28 @@ class Perfil(models.Model):
 	def __str__(self):
 		template = '{0.user.username}'
 		return template.format(self)
+
+
+class PengajuanKontributor(models.Model):
+	"""
+	Pelajar (bukan tamu) mengajukan diri menjadi kontributor suara. Admin menyetujui/menolak di halaman Pengajuan.
+	Disetujui -> group user dipindah dari pelajar ke kontributor (satu group per user, seperti SJDF).
+	"""
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pengajuan')
+	bahasa = models.ForeignKey('custom.Bahasa', on_delete=models.PROTECT, related_name='+', verbose_name="Lian ne'ebé ha'u koalia")
+	alasan = models.CharField(max_length=300, verbose_name="Razaun / esperiénsia")
+	status = models.CharField(choices=[('menunggu', 'Hein'), ('disetujui', 'Aprova'), ('ditolak', 'Rejeita')],
+							  max_length=10, default='menunggu', db_index=True)
+	catatan = models.CharField(max_length=200, blank=True, verbose_name="Razaun rejeita")
+	ditinjau_oleh = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+	ditinjau_pada = models.DateTimeField(null=True, blank=True)
+	datetime = models.DateTimeField(auto_now_add=True)
+
+	class Meta:
+		ordering = ['-datetime']
+		verbose_name = "Pengajuan kontributor"
+		verbose_name_plural = "Pengajuan kontributor"
+
+	def __str__(self):
+		template = '{0.user.username} / {0.bahasa} ({0.status})'
+		return template.format(self)

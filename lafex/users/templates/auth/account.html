@@ -10,6 +10,7 @@
 			{% if perfil.peran == 'anak' %}{% t "role_anak" %}{% elif perfil.peran == 'dewasa' %}{% t "role_dewasa" %}{% elif perfil.peran == 'guru' %}{% t "role_guru" %}{% elif perfil.peran == 'ibu_pasar' %}{% t "role_ibu_pasar" %}{% else %}-{% endif %}
 			<a href="{% url 'user-peran' %}" class="ml-2 small font-weight-bold">{% t "account_change_role" %}</a></td></tr>
 	</table>
+	{% if group == 'pelajar' %}<p><a href="{% url 'user-ajukan' %}" class="font-weight-bold"><i class="fa fa-microphone"></i> {% t "apply_link" %}</a></p>{% elif group == 'kontributor' %}<p class="font-weight-bold"><i class="fa fa-check-circle text-success"></i> {% t "apply_done" %}</p>{% endif %}
 	<form method="post" action="{% url 'logout' %}">{% csrf_token %}
 		<button type="submit" class="btn-lian hitam"><i class="fa fa-sign-out"></i> {% t "nav_logout" %}</button>
 	</form>
