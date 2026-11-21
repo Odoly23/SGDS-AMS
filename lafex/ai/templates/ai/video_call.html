@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b10">
+<title>LAFEX - Video Call</title>
+<style>
+	:root { --merah: #C8201A; --kuning: #FFC72C; --gelap: #0b0b10; --abu: #1c1c24; --putih: #fff; }
+	* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+	html, body { margin: 0; height: 100%; background: var(--gelap); color: var(--putih); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+	button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+
+	/* Layar penuh: video di atas (fleksibel), kontrol di bawah */
+	.call { height: 100vh; height: 100dvh; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; background: #000; }
+	.stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: radial-gradient(circle at 50% 30%, #2a2a38, #0b0b10 70%); }
+	#lafex-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; transition: opacity .15s; }
+	#lafex-img.sembunyi { visibility: hidden; }
+	#cadangan { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; font-size: 7rem; gap: 8px; }
+	#cadangan small { font-size: 1rem; opacity: .7; }
+
+	/* Bar atas (di atas video) */
+	.atas { position: absolute; top: 0; left: 0; right: 0; z-index: 3; padding: calc(10px + env(safe-area-inset-top)) 12px 28px; background: linear-gradient(rgba(0,0,0,.7), rgba(0,0,0,0)); }
+	.baris-atas { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+	.kembali { background: rgba(255,255,255,.18); border-radius: 999px; padding: 9px 14px; font-weight: 700; font-size: .95rem; min-height: 44px; }
+	.poin { background: var(--kuning); color: #1b1411; border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: .95rem; white-space: nowrap; }
+	.info { margin-top: 10px; text-align: center; text-shadow: 0 1px 4px #000; }
+	.live { font-weight: 800; letter-spacing: .04em; font-size: .95rem; }
+	.live i { color: #ff3b30; font-style: normal; animation: kedip 1.2s infinite; }
+	.topik { font-size: .9rem; opacity: .9; margin-top: 2px; }
+	@keyframes kedip { 50% { opacity: .25; } }
+
+	/* Subtitle: apa yang LAFEX katakan */
+	.subtitle { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 3; background: rgba(0,0,0,.68); border-radius: 14px; padding: 10px 14px; max-height: 38%; overflow-y: auto; }
+	#kamu { font-size: .85rem; opacity: .75; margin-bottom: 4px; display: none; }
+	#kamu.ada { display: block; }
+	#subtitle { font-size: 1.15rem; line-height: 1.4; font-weight: 600; }
+
+	/* Kontrol bawah */
+	.kontrol { flex: none; background: var(--abu); padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); }
+	.mode { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+	.mode button { background: #2c2c38; border-radius: 12px; padding: 10px 4px; font-weight: 800; font-size: .85rem; border: 2px solid transparent; min-height: 46px; }
+	.mode button[aria-pressed="true"] { background: var(--merah); border-color: var(--kuning); }
+	.ketik { display: flex; gap: 8px; margin-bottom: 10px; }
+	#input { flex: 1; min-width: 0; background: #2c2c38; color: var(--putih); border: 2px solid #3a3a48; border-radius: 999px; padding: 12px 16px; font-size: 16px; /* 16px: iPhone tidak zoom */ outline: none; }
+	#input:focus { border-color: var(--kuning); }
+	#kirim { background: var(--kuning); color: #1b1411; border-radius: 50%; width: 48px; height: 48px; font-size: 1.3rem; font-weight: 900; flex: none; }
+	.aksi { display: flex; align-items: center; justify-content: space-around; }
+	.aksi .kecil { background: #2c2c38; border-radius: 16px; padding: 8px 14px; font-size: .85rem; font-weight: 700; min-height: 54px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+	.aksi .kecil span { font-size: 1.25rem; }
+	#tutup { background: #d92d20; }
+	#mik { width: 74px; height: 74px; border-radius: 50%; background: var(--merah); font-size: 2rem; box-shadow: 0 0 0 5px rgba(255,199,44,.35); }
+	#mik.rekam { background: #ff3b30; animation: denyut 1s infinite; }
+	@keyframes denyut { 50% { box-shadow: 0 0 0 14px rgba(255,59,48,.25); } }
+	button:disabled { opacity: .45; cursor: not-allowed; }
+	button:focus-visible { outline: 3px solid var(--kuning); outline-offset: 2px; }
+	@media (max-height: 640px) { #subtitle { font-size: 1rem; } #mik { width: 62px; height: 62px; } }
+</style>
+</head>
+<body>
+<div class="call">
+	<div class="stage">
+		<img id="lafex-img" alt="LAFEX">
+		<div id="cadangan" aria-hidden="true"></div>
+
+		<div class="atas">
+			<div class="baris-atas">
+				<button class="kembali" id="kembali" type="button">&lsaquo; Kembali ke Beranda Siswa</button>
+				<div class="poin" id="poin">⭐ Poin: 0</div>
+			</div>
+			<div class="info">
+				<div class="live"><i>●</i> LIVE - LAFEX <span id="nama-mode"></span></div>
+				<div class="topik" id="topik"></div>
+			</div>
+		</div>
+
+		<div class="subtitle" aria-live="polite">
+			<div id="kamu"></div>
+			<div id="subtitle"></div>
+		</div>
+	</div>
+
+	<div class="kontrol">
+		<div class="mode" role="group" aria-label="Mode LAFEX">
+			<button type="button" data-mode="preman" aria-pressed="false">😎 PREMAN</button>
+			<button type="button" data-mode="pintar" aria-pressed="false">🤓 PINTAR</button>
+			<button type="button" data-mode="professional" aria-pressed="false">👔 PROFESSIONAL</button>
+		</div>
+		<form class="ketik" id="form" autocomplete="off">
+			<input id="input" type="text" maxlength="500" placeholder="Ketik di sini... / Hakerek iha ne'e..." aria-label="Pesan">
+			<button id="kirim" type="submit" aria-label="Kirim">➤</button>
+		</form>
+		<div class="aksi">
+			<button class="kecil" id="ulangi" type="button"><span>🔊</span>Ulangi</button>
+			<button id="mik" type="button" aria-label="Bicara (tekan lalu bicara)">🎤</button>
+			<button class="kecil" id="tutup" type="button"><span>📞</span>Tutup</button>
+		</div>
+	</div>
+</div>
+
+<script>
+(function () {
+	"use strict";
+
+	// ---------------------------------------------------------------- PENGATURAN
+	var IMG_BASE = "/static/img/lafex/";        // folder gambar Anda
+	var URL_CHAT = "/api/lafex-chat/";          // endpoint backend
+	var URL_SISWA = "/";                        // tujuan tombol kembali bila tidak ada halaman sebelumnya (ganti ke URL halaman Siswa)
+
+	// Mapping gambar: GAMBAR[mode][gerakan]
+	var GAMBAR = {
+		preman:       { diam: "preman_diam.png", ngomong: "preman_ngomong.png", jempol: "preman_jempol.png", mikir: "preman_mikir.png" },
+		pintar:       { diam: "pintar_diam.png", ngomong: "pintar_ngomong.png", jempol: "pintar_jempol.png", mikir: "pintar_mikir.png" },
+		professional: { diam: "pro_diam.png",    ngomong: "pro_ngomong.png",    jempol: "pro_jempol.png",    mikir: "pro_mikir.png" }
+	};
+	var EMOJI_MODE = { preman: "😎", pintar: "🤓", professional: "👔" };
+	var EMOJI_POSE = { diam: "", ngomong: "💬", jempol: "👍", mikir: "🤔" };
+	var NAMA_MODE = { preman: "PREMAN", pintar: "PINTAR", professional: "PROFESSIONAL" };
+
+	// Sapaan per mode dan bahasa
+	var SAPAAN = {
+		preman: {
+			tetun: "Yo! Mai ko'alia santai de'it!", portugues: "Eh! Bora conversar à vontade!",
+			inggris: "Yo! Let's just chill and talk!", indonesia: "Yo! Ayo ngobrol santai aja!"
+		},
+		pintar: {
+			tetun: "Bom dia! Mai ita aprende hamutuk, ho calma.", portugues: "Bom dia! Vamos aprender juntos, com calma.",
+			inggris: "Good morning! Let's learn together, nice and slow.", indonesia: "Selamat pagi! Ayo kita belajar bersama, pelan-pelan."
+		},
+		professional: {
+			tetun: "Bom dia. Hau bele ajuda ita hanesan ne'e?", portugues: "Bom dia. Como posso ajudar?",
+			inggris: "Good morning. How may I help you?", indonesia: "Selamat pagi. Ada yang bisa saya bantu?"
+		}
+	};
+
+	// Bahasa: nama tampil + kode suara/pengenalan. Browser umumnya TIDAK punya suara/pengenalan Tetun,
+	// jadi Tetun memakai pt-PT sebagai pendekatan (pelafalan tidak sempurna).
+	var BAHASA = {
+		tetun:     { nama: "Tetun",     suara: "pt-PT" },
+		portugues: { nama: "Português", suara: "pt-PT" },
+		inggris:   { nama: "English",   suara: "en-US" },
+		indonesia: { nama: "Indonesia", suara: "id-ID" }
+	};
+	var ALIAS_BAHASA = { tet: "tetun", pt: "portugues", portugis: "portugues", portugese: "portugues", portuguese: "portugues",
+		en: "inggris", english: "inggris", id: "indonesia", indonesian: "indonesia" };
+	var ALIAS_MODE = { pro: "professional", profesional: "professional", formal: "professional" };
+
+	var TEKS = {
+		mikir: "LAFEX lagi mikir...", dengar: "Hau rona... / Aku dengarkan...",
+		galat: "Ups, koneksi bermasalah. Koko fali! / Coba lagi ya.",
+		tanpaMik: "Browser ini belum bisa dengar suara. Ketik saja ya. / Pakai Chrome kalau bisa.",
+		izinMik: "Mikrofon belum diizinkan. Izinkan mikrofon di browser. / Silakan izinkan mikrofon.",
+		tidakDengar: "Hau la rona. Koko fali! / Tidak terdengar, coba lagi."
+	};
+
+	// ---------------------------------------------------------------- UTILITAS
+	function getURLParam(nama, bawaan) {
+		try {
+			var v = new URLSearchParams(window.location.search).get(nama);
+			return v ? v.trim() : bawaan;
+		} catch (e) { return bawaan; }
+	}
+	function $(id) { return document.getElementById(id); }
+	function rapikan(s) { return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); }); }
+	function getCookie(n) {
+		var m = document.cookie.match(new RegExp("(?:^|; )" + n + "=([^;]*)"));
+		return m ? decodeURIComponent(m[1]) : "";
+	}
+
+	// ---------------------------------------------------------------- KEADAAN
+	var modeParam = getURLParam("mode", "preman").toLowerCase();
+	modeParam = ALIAS_MODE[modeParam] || modeParam;
+	var mode = GAMBAR[modeParam] ? modeParam : "preman";
+
+	var bahasaParam = getURLParam("bahasa", "tetun").toLowerCase();
+	bahasaParam = ALIAS_BAHASA[bahasaParam] || bahasaParam;
+	var bahasa = BAHASA[bahasaParam] ? bahasaParam : "tetun";
+
+	var topikParam = getURLParam("topik", "bebas").slice(0, 40).replace(/[^\w\- ]/g, "");
+	var topik = topikParam || "bebas";
+
+	var poin = 0;
+	try { poin = parseInt(localStorage.getItem("lafex_vc_poin"), 10) || 0; } catch (e) { /* abaikan */ }
+
+	var pose = "diam", terakhir = "", sibuk = false, mulutTimer = null, mulutBuka = false, jempolTimer = null;
+	var sedangDengar = false, rec = null;
+
+	var img = $("lafex-img"), cadangan = $("cadangan"), subtitle = $("subtitle"), kamu = $("kamu"), input = $("input");
+
+	// ---------------------------------------------------------------- GAMBAR & GERAKAN
+	function setPose(p) {
+		pose = p;
+		img.classList.remove("sembunyi");
+		cadangan.style.display = "none";
+		img.src = IMG_BASE + GAMBAR[mode][p];
+	}
+	img.onerror = function () {          // gambar belum ada: tampilkan emoji supaya halaman tetap bisa dipakai
+		img.classList.add("sembunyi");
+		cadangan.style.display = "flex";
+		cadangan.innerHTML = "";
+		var e = document.createElement("div"); e.textContent = EMOJI_MODE[mode] + EMOJI_POSE[pose];
+		var s = document.createElement("small"); s.textContent = IMG_BASE + GAMBAR[mode][pose];
+		cadangan.appendChild(e); cadangan.appendChild(s);
+	};
+	function prapemuatan() {
+		Object.keys(GAMBAR).forEach(function (m) {
+			Object.keys(GAMBAR[m]).forEach(function (p) { var i = new Image(); i.src = IMG_BASE + GAMBAR[m][p]; });
+		});
+	}
+	function mulaiMulut() {              // ganti cepat ngomong <-> diam tiap 180 ms
+		if (mulutTimer) return;
+		mulutTimer = setInterval(function () { mulutBuka = !mulutBuka; setPose(mulutBuka ? "ngomong" : "diam"); }, 180);
+	}
+	function hentiMulut() {
+		if (mulutTimer) { clearInterval(mulutTimer); mulutTimer = null; }
+		mulutBuka = false;
+	}
+	function batalJempol() { if (jempolTimer) { clearTimeout(jempolTimer); jempolTimer = null; } }
+
+	// ---------------------------------------------------------------- TAMPILAN
+	function tampilPoin() { $("poin").textContent = "⭐ Poin: " + poin; }
+	function tambahPoin(n) {
+		poin += n; tampilPoin();
+		try { localStorage.setItem("lafex_vc_poin", String(poin)); } catch (e) { /* abaikan */ }
+	}
+	function tampilInfo() {
+		$("nama-mode").textContent = "· " + NAMA_MODE[mode];
+		$("topik").textContent = BAHASA[bahasa].nama + " • " + rapikan(topik);
+		Array.prototype.forEach.call(document.querySelectorAll(".mode button"), function (b) {
+			b.setAttribute("aria-pressed", b.getAttribute("data-mode") === mode ? "true" : "false");
+		});
+	}
+	function tulis(teks) { subtitle.textContent = teks; subtitle.parentNode.scrollTop = 0; }
+	function tulisKamu(teks) { kamu.textContent = teks ? "Ita / Kamu: " + teks : ""; kamu.classList.toggle("ada", !!teks); }
+
+	// ---------------------------------------------------------------- SUARA (SpeechSynthesis)
+	var TTS = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+
+	function pilihSuara(kode) {
+		if (!TTS) return null;
+		var daftar = window.speechSynthesis.getVoices() || [];
+		var dasar = kode.slice(0, 2).toLowerCase();
+		for (var i = 0; i < daftar.length; i++) if (daftar[i].lang && daftar[i].lang.replace("_", "-").toLowerCase() === kode.toLowerCase()) return daftar[i];
+		for (var j = 0; j < daftar.length; j++) if (daftar[j].lang && daftar[j].lang.toLowerCase().indexOf(dasar) === 0) return daftar[j];
+		return null;
+	}
+
+	function berhentiBicara() {
+		if (TTS) window.speechSynthesis.cancel();
+		hentiMulut();
+	}
+
+	// Ucapkan teks sambil menggerakkan mulut. selesai() dipanggil tepat satu kali.
+	function ucapkan(teks, kodeBahasa, selesai) {
+		berhentiBicara();
+		var usai = false, cadanganTimer = null;
+		function akhir() {
+			if (usai) return; usai = true;
+			clearTimeout(cadanganTimer); hentiMulut();
+			if (selesai) selesai();
+		}
+		// Pengaman: sebagian browser tidak memanggil onend pada teks panjang / tanpa suara
+		var perkiraan = Math.max(2500, teks.length * 95);
+		cadanganTimer = setTimeout(function () { if (TTS) window.speechSynthesis.cancel(); akhir(); }, perkiraan + 4000);
+
+		if (!TTS) {                                    // tanpa suara: tetap gerakkan mulut selama perkiraan waktu baca
+			mulaiMulut(); cadanganTimer = setTimeout(akhir, perkiraan); return;
+		}
+		var u = new SpeechSynthesisUtterance(teks);
+		var kode = (kodeBahasa && BAHASA[kodeBahasa] ? BAHASA[kodeBahasa].suara : BAHASA[bahasa].suara);
+		u.lang = kode;
+		var v = pilihSuara(kode); if (v) u.voice = v;
+		u.rate = mode === "preman" ? 1.05 : (mode === "professional" ? 0.95 : 0.85);
+		u.onstart = mulaiMulut;
+		u.onend = akhir; u.onerror = akhir;
+		window.speechSynthesis.speak(u);
+	}
+
+	function bicaraLalu(teks, kodeBahasa, benar) {
+		ucapkan(teks, kodeBahasa, function () {
+			batalJempol();
+			if (benar) {                               // jawaban benar: jempol 2 detik, lalu diam
+				setPose("jempol");
+				jempolTimer = setTimeout(function () { setPose("diam"); jempolTimer = null; }, 2000);
+			} else {
+				setPose("diam");
+			}
+		});
+	}
+
+	// ---------------------------------------------------------------- GANTI MODE (tanpa reload)
+	function setMode(m, umumkan) {
+		if (!GAMBAR[m]) return;
+		mode = m;
+		batalJempol(); berhentiBicara();
+		tampilInfo(); setPose("diam");
+		var sapa = SAPAAN[mode][bahasa];
+		terakhir = sapa; tulisKamu(""); tulis(sapa);
+		try {                                          // simpan mode di URL tanpa reload (tombol Kembali tetap benar)
+			var u = new URL(window.location.href); u.searchParams.set("mode", mode);
+			window.history.replaceState(null, "", u.toString());
+		} catch (e) { /* abaikan */ }
+		if (umumkan) bicaraLalu(sapa, bahasa, false);   // dipicu klik user, jadi suara boleh diputar
+	}
+
+	// ---------------------------------------------------------------- KIRIM KE BACKEND
+	function kirim(teks) {
+		teks = (teks || "").trim();
+		if (!teks || sibuk) return;
+		sibuk = true; $("kirim").disabled = true;
+		batalJempol(); berhentiBicara();
+		tulisKamu(teks); setPose("mikir"); tulis(TEKS.mikir);
+		input.value = "";
+
+		var ctl = ("AbortController" in window) ? new AbortController() : null;
+		var batas = setTimeout(function () { if (ctl) ctl.abort(); }, 30000);
+		fetch(URL_CHAT, {
+			method: "POST", credentials: "same-origin", signal: ctl ? ctl.signal : undefined,
+			headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+			body: JSON.stringify({ pesan: teks, mode: mode, bahasa: bahasa, topik: topik })
+		}).then(function (r) {
+			if (!r.ok) throw new Error("HTTP " + r.status);
+			return r.json();
+		}).then(function (d) {
+			var jawab = (d && typeof d.jawaban === "string") ? d.jawaban : "";
+			if (!jawab) throw new Error("kosong");
+			terakhir = jawab; tulis(jawab);
+			var benar = d.benar === true;
+			if (benar) tambahPoin(10);
+			bicaraLalu(jawab, BAHASA[d.lang] ? d.lang : bahasa, benar);
+		}).catch(function () {
+			setPose("diam"); tulis(TEKS.galat);
+		}).then(function () {
+			clearTimeout(batas); sibuk = false; $("kirim").disabled = false;
+		});
+	}
+
+	// ---------------------------------------------------------------- BICARA (SpeechRecognition)
+	var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+	var mik = $("mik");
+
+	function selesaiDengar() { sedangDengar = false; mik.classList.remove("rekam"); }
+
+	function mulaiDengar() {
+		if (!SR) { tulis(TEKS.tanpaMik); return; }
+		if (sibuk) return;
+		batalJempol(); berhentiBicara();
+		rec = new SR();
+		rec.lang = BAHASA[bahasa].suara;
+		rec.interimResults = false; rec.maxAlternatives = 1; rec.continuous = false;
+		var dapat = false;
+		rec.onstart = function () { sedangDengar = true; mik.classList.add("rekam"); setPose("mikir"); tulis(TEKS.dengar); };
+		rec.onresult = function (e) {
+			var t = e.results && e.results[0] && e.results[0][0] ? e.results[0][0].transcript : "";
+			if (t) { dapat = true; input.value = t; kirim(t); }
+		};
+		rec.onerror = function (e) {
+			if (e.error === "not-allowed" || e.error === "service-not-allowed") tulis(TEKS.izinMik);
+			else if (e.error !== "aborted") tulis(TEKS.tidakDengar);
+		};
+		rec.onend = function () { selesaiDengar(); if (!dapat && !sibuk) { setPose("diam"); if (subtitle.textContent === TEKS.dengar) tulis(terakhir); } };
+		try { rec.start(); } catch (e) { selesaiDengar(); }
+	}
+	function hentiDengar() { if (rec && sedangDengar) { try { rec.stop(); } catch (e) { /* abaikan */ } } }
+
+	// ---------------------------------------------------------------- KEMBALI / TUTUP
+	function kembali() {
+		berhentiBicara(); hentiDengar();
+		var dariSitusSama = false;
+		try { dariSitusSama = document.referrer && new URL(document.referrer).origin === window.location.origin; } catch (e) { /* abaikan */ }
+		if (dariSitusSama && window.history.length > 1) window.history.back();
+		else window.location.href = URL_SISWA;
+	}
+
+	// ---------------------------------------------------------------- PASANG EVENT
+	var terbuka = false;
+	document.addEventListener("pointerdown", function () {        // iPhone: suara baru boleh diputar setelah ada sentuhan
+		if (terbuka || !TTS) return; terbuka = true;
+		try { window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); } catch (e) { /* abaikan */ }
+	}, { once: false, passive: true });
+
+	Array.prototype.forEach.call(document.querySelectorAll(".mode button"), function (b) {
+		b.addEventListener("click", function () { setMode(b.getAttribute("data-mode"), true); });
+	});
+	$("form").addEventListener("submit", function (e) { e.preventDefault(); kirim(input.value); });   // tombol ➤ dan tombol Enter
+	mik.addEventListener("click", function () { if (sedangDengar) hentiDengar(); else mulaiDengar(); });
+	$("ulangi").addEventListener("click", function () { if (terakhir) bicaraLalu(terakhir, bahasa, false); });
+	$("tutup").addEventListener("click", kembali);
+	$("kembali").addEventListener("click", kembali);
+	window.addEventListener("pagehide", function () { berhentiBicara(); });
+	if (TTS && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = function () { /* daftar suara siap */ };
+	if (!SR) { mik.disabled = true; mik.title = TEKS.tanpaMik; }
+
+	// ---------------------------------------------------------------- MULAI
+	prapemuatan(); tampilPoin();
+	setMode(mode, false);               // tampil diam + sapaan (belum bersuara: browser butuh sentuhan dulu)
+})();
+</script>
+</body>
+</html>
