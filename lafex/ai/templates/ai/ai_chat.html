@@ -9,6 +9,7 @@
 	{# ===== 1. Pilih karakter AI ===== #}
 	<section id="pilih">
 		<h1 class="judul-halaman mt-0 text-center">{% t "ai_pick" %}</h1>
+		<a href="{% url 'video-call' %}" class="kartu kartu-merah kartu-level w-100 mb-3"><span class="gambar" aria-hidden="true"><i class="fa fa-phone" style="color:var(--navy)"></i></span><span class="flex-fill"><span class="judul">{% t "call_link" %}</span></span></a>
 		{% for k in karakter_list %}
 		<button type="button" class="kartu kartu-{{ k.warna }} kartu-level w-100 border-0 pilih-karakter" data-kode="{{ k.kode }}" data-nama="{{ k.nama_tet }}" data-emoji="{{ k.emoji }}" data-aksesori="{% static 'main/images/aksesori-'|add:k.kode|add:'.svg' %}">
 			<span class="gambar" aria-hidden="true"><span class="mini-lafaek"><img src="{% static 'main/images/lafaek.svg' %}" alt=""><img src="{% static 'main/images/aksesori-'|add:k.kode|add:'.svg' %}" alt=""></span></span>

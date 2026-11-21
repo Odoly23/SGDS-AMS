@@ -19,6 +19,7 @@ TEKS = {
     "nav_learn": dict(tet="Aprende", en="Learn", pt="Aprender", id="Belajar"),
     "nav_talk": dict(tet="Ko'alia", en="Talk", pt="Falar", id="Bicara"),
     "nav_help": dict(tet="Ajuda AI", en="Help AI", pt="Ajudar IA", id="Bantu AI"),
+    "call_link": dict(tet="Telefone ho LAFEX (video call, bebas liman)", en="Call LAFEX (video call, hands-free)", pt="Ligar ao LAFEX (videochamada, mãos livres)", id="Telepon LAFEX (video call, tanpa klik)"),
     # ajukan jadi kontributor
     "apply_title": dict(tet="Sai kontributór", en="Become a contributor", pt="Tornar-se contribuinte", id="Jadi kontributor"),
     "apply_intro": dict(tet="Ita koalia lian rejionál? Ajuda AI aprende ho grava ita nia lian. Admin sei revee ita nia aplikasaun.", en="Do you speak a local language? Help the AI learn by recording your voice. An admin will review your request.", pt="Falas uma língua regional? Ajuda a IA a aprender gravando a tua voz. Um administrador vai rever o teu pedido.", id="Kamu bisa bahasa daerah? Bantu AI belajar dengan merekam suaramu. Admin akan meninjau pengajuanmu."),

@@ -67,9 +67,11 @@ class Hasil:
 	model: str = ''
 
 
-def bangun_sistem(karakter, peran, bahasa_ucap):
+def bangun_sistem(karakter, peran, bahasa_ucap, tambahan=''):
 	konteks = KONTEKS_PERAN.get(peran, '')
 	konteks = (konteks + '\n' if konteks else '') + f'Pengguna berbicara dalam: {NAMA_BAHASA.get(bahasa_ucap, "Tetun")}.'
+	if tambahan:
+		konteks += '\n' + tambahan                                   # mis. mode panggilan video + topik (dari server, bukan dari user)
 	return karakter.prompt_sistem.strip() + '\n' + ATURAN.format(konteks=konteks)
 
 
@@ -183,7 +185,7 @@ def _lokal(sistem, pesan):
 	                        model=cfg['LOCAL_MODEL'])
 
 
-def jawab(karakter, peran, riwayat, ucapan, bahasa_ucap):
+def jawab(karakter, peran, riwayat, ucapan, bahasa_ucap, tambahan=''):
 	"""riwayat = daftar Giliran terdahulu (lama -> baru). Return Hasil. Raise AIGagal bila gagal."""
 	if settings.AI['BACKEND'] == 'dummy':
 		return _dummy(karakter, ucapan)
@@ -192,7 +194,7 @@ def jawab(karakter, peran, riwayat, ucapan, bahasa_ucap):
 		pesan.append({'role': 'user', 'content': g.ucapan})
 		pesan.append({'role': 'assistant', 'content': json.dumps({'tet': g.jawab_tet, 'en': g.jawab_en, 'koreksi': g.koreksi, 'gerak': g.gerak}, ensure_ascii=False)})
 	pesan.append({'role': 'user', 'content': ucapan})
-	sistem = bangun_sistem(karakter, peran, bahasa_ucap)
+	sistem = bangun_sistem(karakter, peran, bahasa_ucap, tambahan)
 	if settings.AI['BACKEND'] == 'local':
 		return _lokal(sistem, pesan)
 	return _anthropic(sistem, pesan)
