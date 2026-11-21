@@ -26,6 +26,8 @@ def Home(request):
 	perfil = getattr(request.user, 'perfil', None)
 	if perfil and not perfil.peran:                  # setelah login: tanya "Kamu siapa?" (sekali)
 		return redirect('user-peran')
+	if settings.HOME_LANGSUNG_BICARA and nama_grup(request.user) == GRUP_PELAJAR:
+		return redirect('video-call')                    # semua orang: langsung bicara, tanpa memilih menu
 	context = {
 		'group': nama_grup(request.user), 'page': 'home',
 		'levels': Level.objects.filter(aktif=True), 'title': 'Varanda',

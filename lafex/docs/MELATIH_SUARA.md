@@ -23,7 +23,16 @@
 1. Kontributor merekam kalimat dan (opsional) menulis ucapannya. Admin menyetujui di **Tinjau**, memakai **Whisper (draf)** untuk mempercepat, lalu **memperbaiki dan menyimpan** transkripsi (itu menandainya "diperiksa admin").
 2. Pantau menit data di **/ai/suara/**. Satu bahasa per model.
 3. `python manage.py export_suara --out data_suara --bahasa fataluku` (butuh `ffmpeg`).
-4. **Whisper**: fine-tune dengan Hugging Face Transformers (`Seq2SeqTrainer`, model `openai/whisper-small` atau `medium`) pada `train.jsonl`; di Colab/Kaggle gratis cukup untuk `small`. Sajikan hasilnya dengan faster-whisper-server atau whisper.cpp, lalu `.env`: `STT_URL=http://server:8000/v1` dan `STT_MODEL=<nama model Anda>`.
+4. **Whisper**: pakai `training/finetune_whisper.py` (atau buka `training/whisper_colab.ipynb` di Colab/Kaggle, GPU T4 gratis cukup untuk `whisper-small`; `--lora` untuk `medium`):
+   ```bash
+   pip install -U transformers accelerate soundfile peft
+   python training/finetune_whisper.py --data data_suara/whisper --out hasil/whisper-tet --model openai/whisper-small --epochs 8 --baseline
+   ```
+   Skrip membagi data latih/dev **berdasarkan isi kalimat** (kalimat yang sama dari beberapa penutur tidak bocor ke dev), menghitung WER, menolak jalan bila data < 200 rekaman (kecuali `--paksa`), dan mencetak perintah konversi untuk faster-whisper. Sajikan hasilnya dengan faster-whisper-server atau whisper.cpp, lalu `.env`: `STT_URL=http://server:8000/v1` dan `STT_MODEL=<nama model Anda>`.
+   - **Apa yang sudah diuji:** logika data/WER/pembagian (tes otomatis di `training/test_finetune_whisper.py`) dan seluruh alur latih (penuh dan `--lora`, simpan, muat ulang) dengan model Whisper mini ACAK di CPU (`training/bangun_model_uji.py`, tanpa unduhan). Satu bug versi library tertangkap di sini (argumen `warmup_ratio` dihapus di transformers terbaru) dan sudah diperbaiki.
+   - **Yang belum:** belum dijalankan dengan model Whisper asli di GPU, jadi kecepatan, memori, dan angka WER sebenarnya belum diketahui. Jalankan `--max-steps 20` dulu.
+   - **Token bahasa:** Whisper tidak punya token Tetun; bawaannya `--bahasa-token portuguese` (terdekat). Bisa diganti `indonesian` atau `tanpa` dan dibandingkan WER-nya.
+   - **WER dev tetap optimistis:** nama penutur sengaja tidak disimpan (privasi), jadi penutur yang sama bisa ada di latih dan dev.
 5. **TTS**: bila memakai XTTS (hanya untuk uji/non-komersial) latih dengan resep Coqui (`train_gpt_xtts.py`) pada `xtts/metadata.csv`; sajikan dengan xtts-api-server dan isi `TTS_URL`, `TTS_SUARA`, `TTS_BAHASA`. Untuk komersial pilih mesin berlisensi longgar (mis. Piper) dan sesuaikan `ai/suara.py:sintesis()` ke format API-nya.
 6. Perintah/nama paket di langkah 4-5 adalah arah umum; ikuti dokumentasi terbaru tiap proyek, karena belum saya jalankan.
 

@@ -80,27 +80,39 @@
 	.vc-lapis { position: absolute; inset: 0; z-index: 20; background: rgba(27,20,17,.78); display: none; align-items: center; justify-content: center; padding: 18px; }
 	.vc-lapis.ada { display: flex; }
 	.vc-kartu { background: var(--kain); border-radius: 26px; border: 4px solid var(--navy-dk); box-shadow: 0 8px 0 rgba(27,20,17,.9); padding: 18px 16px; max-width: 420px; width: 100%; text-align: center; max-height: 100%; overflow-y: auto; }
-	.vc-kartu h2 { font-size: 24px; font-weight: 900; margin: 0 0 6px; }
-	.vc-kartu p { font-size: 15px; margin: 0 0 12px; }
-	.vc-menit { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
-	.vc-menit button { background: var(--white); border-radius: 12px; padding: 8px 14px; font-weight: 900; box-shadow: inset 0 0 0 3px var(--navy-dk); }
+	.vc-kartu h2 { font-size: 22px; font-weight: 900; margin: 0 0 4px; }
+	.vc-kartu p { font-size: 14px; margin: 0 0 8px; }
+	.vc-menit { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+	.vc-menit button { background: var(--white); border-radius: 12px; padding: 6px 14px; font-weight: 900; box-shadow: inset 0 0 0 3px var(--navy-dk); }
 	.vc-menit button[aria-pressed="true"] { background: var(--navy-dk); color: var(--kuning); }
 	.vc-besar { display: block; width: 100%; background: var(--kuning); color: var(--navy-dk); border-radius: 20px; padding: 14px; font-size: 20px; font-weight: 900; box-shadow: inset 0 0 0 4px var(--navy-dk), 0 6px 0 rgba(27,20,17,.9); margin-bottom: 12px; }
 	.vc-besar.merah { background: var(--navy); color: var(--white); }
 	.vc-catatan { font-size: 12px; opacity: .75; }
 	.vc-demo { display: inline-block; background: var(--navy-dk); color: var(--kuning); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 900; margin-bottom: 8px; }
+	/* Pilihan di layar awal (bahasa, topik) dan menu kecil: semuanya di halaman yang sama */
+	.vc-chip { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+	.vc-chip button { background: var(--white); border-radius: 12px; padding: 5px 10px; font-weight: 900; font-size: 13px; box-shadow: inset 0 0 0 3px var(--navy-dk); min-height: 38px; flex: none; white-space: nowrap; }
+	#pil-topik { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding: 2px 2px 8px; -webkit-overflow-scrolling: touch; }
+	#mulai { position: sticky; bottom: -6px; z-index: 2; margin-bottom: 8px; }
+	.vc-chip button[aria-pressed="true"] { background: var(--navy-dk); color: var(--kuning); }
+	.vc-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; opacity: .7; margin: 4px 0 3px; }
+	.vc-menu-btn { background: rgba(255,255,255,.2); border-radius: 12px; padding: 8px 14px; font-weight: 900; font-size: 20px; min-height: 44px; min-width: 52px; }
+	.vc-menu a, .vc-menu button.item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--white); color: var(--navy-dk); text-decoration: none; border-radius: 16px; padding: 14px; margin-bottom: 10px; font-size: 18px; font-weight: 900; box-shadow: inset 0 0 0 3px var(--navy-dk), 0 4px 0 rgba(27,20,17,.9); }
+	.vc-menu .ikon { font-size: 26px; }
+	.vc-menu form { margin: 0; }
 	@media (max-height: 660px) { #subtitle { font-size: 17px; } #mik { width: 62px; height: 62px; font-size: 26px; } .vc-mode button { min-height: 40px; } .vc-kecil { min-height: 50px; } }
 </style>
 </head>
 <body data-chat="{% url 'lafex-chat' %}" data-img="{% static 'img/lafex/' %}"
       data-svg="{% static 'main/images/' %}" data-demo="{% if demo %}1{% else %}0{% endif %}" data-xtts="{% if xtts %}1{% else %}0{% endif %}" data-tts="{% url 'ai-tts' %}"
-      data-menit="{{ menit_bawaan }}" data-menit-maks="{{ menit_maks }}" data-maks-teks="{{ maks_teks }}">
+      data-langsung="{% if langsung %}1{% else %}0{% endif %}" data-menit="{{ menit_bawaan }}" data-menit-maks="{{ menit_maks }}" data-maks-teks="{{ maks_teks }}">
 <div class="vc">
 	<div class="topbar" aria-hidden="true"></div>
 
 	<div class="vc-bar">
 		<div class="baris">
-			<button class="vc-kembali" id="kembali" type="button">&lsaquo; Kembali ke Beranda Siswa</button>
+			{% if langsung %}<button class="vc-menu-btn" id="menu-buka" type="button" aria-label="Menu">☰</button>
+			{% else %}<button class="vc-kembali" id="kembali" type="button">&lsaquo; Kembali ke Beranda Siswa</button>{% endif %}
 			<div class="vc-waktu" id="waktu" aria-label="Sisa waktu">00:00</div>
 			<div class="vc-poin" id="poin">⭐ Poin: 0</div>
 		</div>
@@ -126,7 +138,20 @@
 		<div class="vc-lapis ada" id="lapis-awal">
 			<div class="vc-kartu">
 				<h2>📞 Telefone ho LAFEX</h2>
-				<p>Hili mode no durasaun, lalu tekan sekali. Sesudah itu mikrofon <b>menyala otomatis</b>, tinggal bicara seperti video call, tanpa klik lagi.</p>
+				<p>{% if langsung %}Pilihanmu diingat. Tinggal tekan <b>sekali</b>, lalu bicara.{% else %}Hili mode no durasaun, lalu tekan sekali.{% endif %} Mikrofon <b>menyala otomatis</b>, bicara seperti video call tanpa klik lagi.</p>
+				<div class="vc-label">Lian / Bahasa</div>
+				<div class="vc-chip" id="pil-bahasa" role="group" aria-label="Bahasa">
+					<button type="button" data-bahasa="tetun" aria-pressed="false">Tetun</button>
+					<button type="button" data-bahasa="portugues" aria-pressed="false">Português</button>
+					<button type="button" data-bahasa="inggris" aria-pressed="false">English</button>
+					<button type="button" data-bahasa="indonesia" aria-pressed="false">Indonesia</button>
+				</div>
+				<div class="vc-label">Topiku / Topik</div>
+				<div class="vc-chip" id="pil-topik" role="group" aria-label="Topik">
+					<button type="button" data-topik="bebas" aria-pressed="false">💬 Bebas</button>
+					{% for t in topik_list %}<button type="button" data-topik="{{ t.nilai }}" aria-pressed="false">{{ t.emoji }} {{ t.nama }}</button>{% endfor %}
+				</div>
+				<div class="vc-label">Durasaun / Durasi</div>
 				<div class="vc-menit" role="group" aria-label="Durasi">
 					<button type="button" data-menit="3" aria-pressed="false">3 min</button>
 					<button type="button" data-menit="5" aria-pressed="false">5 min</button>
@@ -144,10 +169,24 @@
 				<h2 id="akhir-judul">Obrigadu! Waktu habis</h2>
 				<p id="akhir-isi"></p>
 				<button type="button" class="vc-besar" id="ulang">📞 Telefone fali</button>
-				<button type="button" class="vc-besar merah" id="pulang">‹ Kembali ke Beranda Siswa</button>
+				{% if langsung %}<button type="button" class="vc-besar merah" id="menu-buka2">☰ Menu</button>
+				{% else %}<button type="button" class="vc-besar merah" id="pulang">‹ Kembali ke Beranda Siswa</button>{% endif %}
 			</div>
 		</div>
 	</div>
+
+	{% if langsung %}
+	<div class="vc-lapis vc-menu" id="lapis-menu" style="position:fixed;z-index:40">
+		<div class="vc-kartu">
+			<h2>☰ Menu</h2>
+			<a href="{% url 'belajar-list' %}"><span class="ikon">📚</span> Aprende / Belajar</a>
+			<a href="{% url 'user-account' %}"><span class="ikon">👤</span> Konta / Akun</a>
+			{% if not tamu %}<a href="{% url 'user-ajukan' %}"><span class="ikon">🎤</span> Sai kontributór</a>{% endif %}
+			<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="item" type="submit"><span class="ikon">🚪</span> Sai / Keluar</button></form>
+			<button type="button" class="vc-besar" id="menu-tutup">✕ Tutup</button>
+		</div>
+	</div>
+	{% endif %}
 
 	<div class="vc-kontrol">
 		<div class="vc-status" id="status" aria-live="polite"></div>
@@ -221,11 +260,20 @@
 	function mmss(d) { d = Math.max(0, Math.ceil(d)); return ("0" + Math.floor(d / 60)).slice(-2) + ":" + ("0" + (d % 60)).slice(-2); }
 
 	// ---------------------------------------------------------------- KEADAAN
-	var mode = getURLParam("mode", "preman").toLowerCase(); mode = ALIAS_MODE[mode] || mode; if (!GAMBAR[mode]) mode = "preman";
-	var bahasa = getURLParam("bahasa", "tetun").toLowerCase(); bahasa = ALIAS_BAHASA[bahasa] || bahasa; if (!BAHASA[bahasa]) bahasa = "tetun";
-	var topik = getURLParam("topik", "bebas").slice(0, 40).replace(/[^\w\- ]/g, "") || "bebas";
+	var LANGSUNG = B.langsung === "1";               // layar utama pelajar: tanpa tombol kembali, pilihan diingat
+	var KUNCI_PILIH = "lafex_vc_pilihan";
+	var simpan = {};
+	try { simpan = JSON.parse(localStorage.getItem(KUNCI_PILIH) || "{}") || {}; } catch (e) { simpan = {}; }
+	function param(nama, ingat, bawaan) {            // urutan: alamat (URL) > pilihan tersimpan > bawaan
+		var u = getURLParam(nama, ""); if (u) return u;
+		return (ingat !== undefined && ingat !== null && ingat !== "") ? String(ingat) : bawaan;
+	}
+	var mode = param("mode", simpan.mode, "preman").toLowerCase(); mode = ALIAS_MODE[mode] || mode; if (!GAMBAR[mode]) mode = "preman";
+	var bahasa = param("bahasa", simpan.bahasa, "tetun").toLowerCase(); bahasa = ALIAS_BAHASA[bahasa] || bahasa; if (!BAHASA[bahasa]) bahasa = "tetun";
+	var topik = param("topik", simpan.topik, "bebas").slice(0, 40).replace(/[^\w\- ]/g, "") || "bebas";
 	var maksMenit = parseInt(B.menitMaks, 10) || 15;
-	var menit = parseInt(getURLParam("menit", B.menit), 10); if (!(menit >= 1)) menit = 5; menit = Math.min(menit, maksMenit);
+	var menit = parseInt(param("menit", simpan.menit, B.menit), 10); if (!(menit >= 1)) menit = 5; menit = Math.min(menit, maksMenit);
+	function simpanPilihan() { try { localStorage.setItem(KUNCI_PILIH, JSON.stringify({ mode: mode, bahasa: bahasa, topik: topik, menit: menit })); } catch (e) { /* abaikan */ } }
 
 	var poin = 0;
 	try { poin = parseInt(localStorage.getItem("lafex_vc_poin"), 10) || 0; } catch (e) { /* abaikan */ }
@@ -273,6 +321,8 @@
 		$("nama-mode").textContent = NAMA_MODE[mode];
 		$("topik").textContent = BAHASA[bahasa].nama + " • " + rapikan(topik);
 		Array.prototype.forEach.call(document.querySelectorAll(".vc-mode button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-mode") === mode ? "true" : "false"); });
+		Array.prototype.forEach.call(document.querySelectorAll("#pil-bahasa button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-bahasa") === bahasa ? "true" : "false"); });
+		Array.prototype.forEach.call(document.querySelectorAll("#pil-topik button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-topik") === topik ? "true" : "false"); });
 	}
 	function status(t) { $("status").textContent = t || ""; }
 	function tulis(utama, terjemahan, koreksi) {
@@ -439,6 +489,7 @@
 		Promise.resolve(ada[m] === undefined ? cekGambar(m) : 0).then(function () { prapemuatan(m); tampilInfo(); setPose("diam"); });
 		tampilInfo(); setPose("diam");
 		var sapa = SAPAAN[mode][bahasa]; terakhir = sapa; tulisKamu(""); tulis(sapa, "", "");
+		simpanPilihan();
 		try { var u = new URL(window.location.href); u.searchParams.set("mode", mode); window.history.replaceState(null, "", u.toString()); } catch (e) { /* abaikan */ }
 		if (bicara) { sibuk = true; ucapkan(sapa, bahasa).then(function () { sibuk = false; dengar(); }); }
 	}
@@ -458,6 +509,7 @@
 
 	function mulai() {
 		if (fase === "jalan") return;
+		simpanPilihan();
 		fase = "jalan"; jumlahGiliran = 0; peringatanTampil = false; tanpaSuara = 0; ulangDengar = 0; micAktif = true; setMik();
 		$("lapis-awal").classList.remove("ada"); $("lapis-akhir").classList.remove("ada");
 		selesaiAt = Date.now() + menit * 60000; hitung(); hitungTimer = setInterval(hitung, 500);
@@ -472,7 +524,7 @@
 		var pamit = PAMIT[bahasa];
 		tulis(pamit, "", ""); berhentiBicara();
 		ucapkan(pamit, bahasa).then(function () {
-			$("akhir-judul").textContent = alasan === "batas" ? "Jatah hari ini habis" : "Obrigadu! Waktu habis";
+			$("akhir-judul").textContent = alasan === "batas" ? "Jatah hari ini habis" : (alasan === "tutup" ? "Obrigadu!" : "Obrigadu! Waktu habis");
 			$("akhir-isi").textContent = "⭐ Poin: " + poin + "  ·  💬 " + jumlahGiliran + " giliran  ·  ⏱ " + menit + " min";
 			$("lapis-akhir").classList.add("ada");
 		});
@@ -497,11 +549,30 @@
 		b.addEventListener("click", function () {
 			menit = parseInt(b.getAttribute("data-menit"), 10);
 			Array.prototype.forEach.call(document.querySelectorAll(".vc-menit button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+			simpanPilihan();
 		});
 	});
 	$("mulai").addEventListener("click", mulai);
 	$("ulang").addEventListener("click", function () { fase = "awal"; mulai(); });
-	$("pulang").addEventListener("click", kembali);
+	if ($("pulang")) $("pulang").addEventListener("click", kembali);
+	Array.prototype.forEach.call(document.querySelectorAll("#pil-bahasa button"), function (b) {
+		b.addEventListener("click", function () {
+			bahasa = b.getAttribute("data-bahasa"); simpanPilihan(); tampilInfo();
+			if (fase !== "jalan") { terakhir = SAPAAN[mode][bahasa]; tulis(terakhir, "", ""); }
+		});
+	});
+	Array.prototype.forEach.call(document.querySelectorAll("#pil-topik button"), function (b) {
+		b.addEventListener("click", function () { topik = b.getAttribute("data-topik"); simpanPilihan(); tampilInfo(); });
+	});
+	function bukaMenu(ya) { var m = $("lapis-menu"); if (m) m.classList.toggle("ada", ya); }
+	["menu-buka", "menu-buka2"].forEach(function (id) { if ($(id)) $(id).addEventListener("click", function () { bukaMenu(true); }); });
+	if ($("menu-tutup")) $("menu-tutup").addEventListener("click", function () { bukaMenu(false); });
+	// Tutup: di layar utama pelajar hanya mengakhiri panggilan (tetap di halaman); di halaman lain kembali ke halaman sebelumnya
+	function tutup() {
+		if (!LANGSUNG) { kembali(); return; }
+		if (fase === "jalan") akhiri("tutup");
+		else if (fase === "akhir") { $("lapis-akhir").classList.remove("ada"); $("lapis-awal").classList.add("ada"); }
+	}
 	$("form").addEventListener("submit", function (e) { e.preventDefault(); if (fase === "jalan") kirim($("input").value); });   // ➤ dan Enter
 	$("mik").addEventListener("click", function () {
 		micAktif = !micAktif; ulangDengar = 0; setMik();
@@ -512,8 +583,8 @@
 		hentiDengar(); sibuk = true;
 		ucapkan(terakhir, terakhir === SAPAAN[mode][bahasa] ? bahasa : "tetun").then(function () { sibuk = false; dengar(); });
 	});
-	$("tutup").addEventListener("click", kembali);
-	$("kembali").addEventListener("click", kembali);
+	$("tutup").addEventListener("click", tutup);
+	if ($("kembali")) $("kembali").addEventListener("click", kembali);
 	document.addEventListener("visibilitychange", function () {   // layar kembali aktif: nyalakan lagi layar & mikrofon
 		if (document.visibilityState === "visible" && fase === "jalan") { tahanLayar(); if (!sibuk) dengar(); }
 		else if (document.visibilityState === "hidden") hentiDengar();

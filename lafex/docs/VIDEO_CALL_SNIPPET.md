@@ -11,6 +11,11 @@ Sudah terpasang di aplikasi (bukan lagi contoh tiruan):
 ```
 `mode`: `preman` | `pintar` | `professional`; `bahasa`: `tetun` | `portugues` | `inggris` | `indonesia`; `topik`: teks pendek; `menit`: 1-15 (bawaan 5).
 
+## Layar utama tanpa menu ("tidak klik ke mana-mana")
+Untuk **pelajar** (semua orang, termasuk tamu) beranda `/` langsung masuk ke `/video-call/`. Di satu layar itu ada pilihan bahasa, topik (dari Level), mode, dan durasi, **diingat** di HP (localStorage), jadi pemakai berikutnya cukup menekan **satu** tombol "MULAI PANGGILAN". Menu kecil ☰ (Belajar, Akun, Sai kontributór, Keluar) membuka lembar di halaman yang sama. Tombol 📞 Tutup hanya mengakhiri panggilan (tetap di halaman). Kontributor dan admin tetap punya beranda dan menu lengkap.
+Matikan dengan `HOME_LANGSUNG_BICARA=0` di `.env` (kembali ke beranda berisi kartu menu).
+Satu ketukan tetap perlu: browser tidak mengizinkan mikrofon/suara menyala sendiri tanpa sentuhan pengguna.
+
 ## Pemetaan mode ke karakter AI
 | Mode | Karakter | Tambahan perintah (ditulis di server) |
 |---|---|---|

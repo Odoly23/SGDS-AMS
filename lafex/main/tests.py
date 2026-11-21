@@ -4,7 +4,7 @@ import json
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from config.user_utils import buat_user, pastikan_grup
 from users.models import Perfil
@@ -42,6 +42,7 @@ class HalamanDanMenu(Dasar):
 			self.assertIn(f'data-set-lang="{kode}"', html)
 		self.assertNotIn('id="sidebar"', html)         # belum login: tanpa menu
 
+	@override_settings(HOME_LANGSUNG_BICARA=False)      # uji beranda berisi kartu menu (bila fitur 'langsung bicara' dimatikan)
 	def test_menu_per_group(self):
 		cek = {
 			'admin': dict(ada=['report-dash', 'u-list', 'crowdsource-home', 'belajar-list'], tak=[]),
@@ -61,6 +62,7 @@ class HalamanDanMenu(Dasar):
 			for t in c['tak']:
 				self.assertNotIn(t, nav, f'{grup} tidak boleh punya {t}')
 
+	@override_settings(HOME_LANGSUNG_BICARA=False)      # uji beranda berisi kartu menu (bila fitur 'langsung bicara' dimatikan)
 	def test_beranda_menu_siswa_tanpa_latih_ai_dan_kontributor_empat_menu(self):
 		self.client.force_login(user_grup('p', 'pelajar'))
 		html = self.client.get('/').content.decode()
@@ -148,6 +150,7 @@ class LoginTamu(Dasar):
 		self.assertEqual(u.groups.first().name, 'pelajar')
 		self.assertEqual(self.client.get('/belajar/').status_code, 200)
 
+	@override_settings(HOME_LANGSUNG_BICARA=False)      # uji beranda berisi kartu menu (bila fitur 'langsung bicara' dimatikan)
 	def test_setelah_login_ditanya_kamu_siapa_sekali(self):
 		buat_user(('email', 'ana@contoh.com'), 'rahasia123')
 		self.client.post('/login/', {'kontak': 'ana@contoh.com', 'password': 'rahasia123'})
@@ -217,3 +220,54 @@ class BuatAdmin(Dasar):
 			call_command('buat_admin', 'bukan-kontak')
 		with self.assertRaises(CommandError):
 			call_command('buat_admin', '7712', '3456', '--password', '123')
+
+
+class BerandaLangsungBicara(TestCase):
+	"""Semua orang (pelajar/tamu) yang masuk langsung tiba di layar panggilan LAFEX: tanpa memilih menu."""
+
+	@classmethod
+	def setUpTestData(cls):
+		call_command('seed_awal', verbosity=0)
+		call_command('seed_level1', verbosity=0)
+
+	def test_pelajar_dan_tamu_langsung_ke_panggilan(self):
+		self.client.force_login(user_grup('p', 'pelajar'))
+		r = self.client.get('/')
+		self.assertRedirects(r, '/video-call/', fetch_redirect_response=False)
+		self.client.logout()
+		self.client.post('/tamu/')                                           # "Lanjut tanpa daftar"
+		self.client.post('/users/peran/', {'peran': 'ibu_pasar'})
+		self.assertRedirects(self.client.get('/'), '/video-call/', fetch_redirect_response=False)
+		self.assertEqual(self.client.get('/video-call/').status_code, 200)
+
+	def test_kontributor_dan_admin_tetap_punya_beranda_menu(self):
+		for grup in ('kontributor', 'admin'):
+			self.client.force_login(user_grup(f'u-{grup}', grup))
+			self.assertEqual(self.client.get('/').status_code, 200, grup)
+
+	@override_settings(HOME_LANGSUNG_BICARA=False)
+	def test_bisa_dimatikan(self):
+		self.client.force_login(user_grup('p2', 'pelajar'))
+		self.assertEqual(self.client.get('/').status_code, 200)
+
+	def test_layar_panggilan_pelajar_satu_halaman_tanpa_kembali(self):
+		self.client.force_login(user_grup('p3', 'pelajar'))
+		html = self.client.get('/video-call/').content.decode()
+		self.assertIn('data-langsung="1"', html)
+		self.assertNotIn('id="kembali"', html)                               # tidak ada "kembali ke beranda": inilah berandanya
+		for kunci in ('id="pil-bahasa"', 'id="pil-topik"', 'data-menit="3"', 'data-mode="pintar"', 'id="mulai"'):
+			self.assertIn(kunci, html)                                       # semua pilihan ada di satu layar
+		for url in ('/belajar/', '/users/account/', '/users/ajukan/', '/logout/'):
+			self.assertIn(f'href="{url}"' if url != '/logout/' else f'action="{url}"', html)    # menu kecil di halaman yang sama
+		self.assertIn('data-topik="', html)                                  # topik dari level
+		self.assertIn('Sai kontributór', html)
+
+	def test_tamu_tidak_melihat_ajukan_kontributor_dan_halaman_lain_tetap_punya_kembali(self):
+		self.client.post('/tamu/')
+		self.client.post('/users/peran/', {'peran': 'anak'})
+		self.assertNotIn('/users/ajukan/', self.client.get('/video-call/').content.decode())
+		self.client.logout()
+		self.client.force_login(user_grup('k', 'kontributor'))
+		html = self.client.get('/video-call/').content.decode()
+		self.assertIn('data-langsung="0"', html)
+		self.assertIn('id="kembali"', html)

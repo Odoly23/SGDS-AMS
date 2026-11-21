@@ -18,7 +18,7 @@ from ai import llm, suara
 from ai.models import Giliran
 from config.decorators import allowed_users
 from config.user_utils import GRUP_ADMIN, SEMUA_GRUP, nama_grup
-from custom.models import KarakterAI
+from custom.models import KarakterAI, Level
 from users.models import Perfil
 
 BAHASA_UCAP = ('tet', 'en', 'pt', 'id')
@@ -123,7 +123,12 @@ MENIT_BAWAAN, MENIT_MAKS = 5, 15
 @ensure_csrf_cookie
 def VideoCall(request):
 	"""Halaman panggilan: bicara langsung dengan LAFEX, tangan bebas, sampai waktu habis. Mode/bahasa/topik/menit dari URL."""
+	grup = nama_grup(request.user)
+	perfil = _perfil(request.user)
+	topik = [{'nilai': re.sub(r'[^\w\- ]', '', l.judul_tet)[:40].strip(), 'emoji': l.emoji, 'nama': l.judul_tet} for l in Level.objects.filter(aktif=True)]
 	return render(request, 'ai/video_call.html', {
+		'group': grup, 'langsung': settings.HOME_LANGSUNG_BICARA and grup == 'pelajar',    # layar utama pelajar: tanpa tombol "kembali"
+		'tamu': perfil.is_tamu, 'topik_list': topik,
 		'maks_teks': settings.AI['MAKS_TEKS'], 'demo': settings.AI['BACKEND'] == 'dummy',
 		'menit_bawaan': MENIT_BAWAAN, 'menit_maks': MENIT_MAKS, 'xtts': suara.tts_siap(),
 	})

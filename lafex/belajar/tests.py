@@ -113,6 +113,7 @@ class Belajar(TestCase):
 		self.client.post(f'/belajar/progresu/{k2.pk}/')
 		self.assertEqual(ProgresBelajar.objects.filter(user__username='tanpa').count(), 0)
 
+	@override_settings(HOME_LANGSUNG_BICARA=False)      # uji beranda berisi kartu menu (bila fitur 'langsung bicara' dimatikan)
 	def test_beranda_menaut_ke_halaman_level(self):
 		self.u.perfil.peran = 'dewasa'
 		self.u.perfil.save()
