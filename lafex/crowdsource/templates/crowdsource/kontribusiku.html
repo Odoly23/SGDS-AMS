@@ -28,7 +28,20 @@
 		{% for r in terakhir %}
 		<tr>
 			<td>{{ r.kalimat.teks_tet|truncatechars:60 }}<br><small>{{ r.bahasa.nama }} · {{ r.gaya.nama_tet }} · {{ r.datetime|date:"d/m/Y" }}</small>
-				{% if r.status == 'ditolak' and r.alasan_tolak %}<br><small class="text-danger">{% t "mine_reason" %}: {{ r.alasan_tolak }}</small>{% endif %}</td>
+				{% if r.status == 'ditolak' and r.alasan_tolak %}<br><small class="text-danger">{% t "mine_reason" %}: {{ r.alasan_tolak }}</small>{% endif %}
+				{% if r.status != 'ditolak' %}
+					{% if r.sumber_transkripsi == 'admin' %}
+						<br><small><i class="fa fa-check-circle text-success"></i> {{ r.transkripsi }}</small>
+					{% else %}
+					<form method="post" action="{% url 'crowdsource-tr' r.pk %}" class="mt-1 mb-0">{% csrf_token %}
+						<label class="small mb-0" for="tw{{ r.pk }}">{% t "mine_write" %}</label>
+						<div class="input-group input-group-sm">
+							<input class="form-control" id="tw{{ r.pk }}" name="transkripsi" maxlength="1000" value="{% if r.sumber_transkripsi == 'kontributor' %}{{ r.transkripsi }}{% endif %}">
+							<div class="input-group-append"><button class="btn btn-dark" type="submit">{% t "rev_save" %}</button></div>
+						</div>
+					</form>
+					{% endif %}
+				{% endif %}</td>
 			<td class="text-right">{% if r.status == 'disetujui' %}<span class="badge badge-success">{% t "mine_ok" %}</span>{% elif r.status == 'ditolak' %}<span class="badge badge-danger">{% t "mine_no" %}</span>{% else %}<span class="badge badge-warning">{% t "mine_wait" %}</span>{% endif %}</td>
 		</tr>
 		{% endfor %}
@@ -37,5 +50,5 @@
 {% else %}
 <p class="text-center">{% t "mine_none" %}</p>
 {% endif %}
-<p class="text-center small mt-3">{% t "mine_note" %}</p>
+<p class="text-center small mt-3">{% t "mine_write_help" %}<br>{% t "mine_note" %}</p>
 {% endblock %}

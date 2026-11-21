@@ -36,6 +36,9 @@ class RekamanSuara(models.Model):
 	alasan_tolak = models.CharField(max_length=200, blank=True, verbose_name="Razaun rejeita")
 	transkripsi = models.TextField(blank=True, verbose_name="Transkrisaun (teks dari suara)",
 								   help_text="Diisi Admin/penutur asli: tulisan dari apa yang diucapkan. Pasangan suara+teks inilah yang berguna untuk melatih AI.")
+	sumber_transkripsi = models.CharField(choices=[('', '-'), ('kontributor', 'Kontributor'), ('otomatis', 'Whisper (draf)'), ('admin', 'Diperiksa admin')],
+								  max_length=12, blank=True, default='', verbose_name="Sumber transkripsi",
+								  help_text="'Whisper (draf)' BELUM boleh dipakai melatih model; harus diperiksa manusia dulu.")
 	pengirim_kode = models.CharField(max_length=12, blank=True, db_index=True)
 	ditinjau_oleh = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 	ditinjau_pada = models.DateTimeField(null=True, blank=True)

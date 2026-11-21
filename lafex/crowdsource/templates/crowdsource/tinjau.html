@@ -3,6 +3,10 @@
 {% block bicara %}{% endblock %}
 {% block content %}
 <h1 class="judul-halaman mt-0">{% t "rev_title" %}</h1>
+<div class="mb-3 d-flex flex-wrap" style="gap:8px">
+	<a class="btn btn-sm btn-outline-dark" href="{% url 'ai-suara' %}"><i class="fa fa-cogs"></i> {% t "voice_link" %}</a>
+	{% if stt_siap %}<form method="post" action="{% url 'crowdsource-whisper-semua' %}" class="m-0">{% csrf_token %}<button class="btn btn-sm btn-dark" type="submit"><i class="fa fa-magic"></i> {% t "stt_all" %}</button></form>{% endif %}
+</div>
 
 <div class="mb-3">
 	<a class="btn btn-sm {% if status == 'menunggu' %}btn-warning{% else %}btn-outline-dark{% endif %}" href="?status=menunggu{% if bahasa %}&bahasa={{ bahasa }}{% endif %}">{% t "mine_wait" %} ({{ jumlah.menunggu }})</a>
@@ -27,12 +31,19 @@
 
 	<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="mb-2">{% csrf_token %}
 		<input type="hidden" name="aksi" value="transkripsi"><input type="hidden" name="kembali" value="{{ kembali }}">
-		<label class="small mb-1" for="tr{{ r.pk }}">{% t "rev_transcript" %}</label>
+		<label class="small mb-1" for="tr{{ r.pk }}">{% t "rev_transcript" %}
+			{% if r.sumber_transkripsi == 'otomatis' %}<span class="badge badge-warning">{% t "stt_draft" %}</span>{% elif r.sumber_transkripsi == 'kontributor' %}<span class="badge badge-info">{% t "src_kontributor" %}</span>{% elif r.sumber_transkripsi == 'admin' %}<span class="badge badge-success">{% t "src_admin" %}</span>{% endif %}</label>
 		<div class="input-group">
 			<input class="form-control" id="tr{{ r.pk }}" name="transkripsi" maxlength="1000" value="{{ r.transkripsi }}">
 			<div class="input-group-append"><button class="btn btn-dark" type="submit">{% t "rev_save" %}</button></div>
 		</div>
 	</form>
+	{% if stt_siap and r.sumber_transkripsi != 'admin' %}
+	<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="mb-2">{% csrf_token %}
+		<input type="hidden" name="aksi" value="whisper"><input type="hidden" name="kembali" value="{{ kembali }}">
+		<button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa fa-magic"></i> {% t "stt_btn" %}</button>
+	</form>
+	{% endif %}
 
 	<div class="d-flex flex-wrap align-items-center" style="gap:8px">
 		<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="m-0">{% csrf_token %}

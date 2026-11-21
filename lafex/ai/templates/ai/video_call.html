@@ -93,7 +93,7 @@
 </style>
 </head>
 <body data-chat="{% url 'lafex-chat' %}" data-img="{% static 'img/lafex/' %}"
-      data-svg="{% static 'main/images/' %}" data-demo="{% if demo %}1{% else %}0{% endif %}"
+      data-svg="{% static 'main/images/' %}" data-demo="{% if demo %}1{% else %}0{% endif %}" data-xtts="{% if xtts %}1{% else %}0{% endif %}" data-tts="{% url 'ai-tts' %}"
       data-menit="{{ menit_bawaan }}" data-menit-maks="{{ menit_maks }}" data-maks-teks="{{ maks_teks }}">
 <div class="vc">
 	<div class="topbar" aria-hidden="true"></div>
@@ -293,7 +293,12 @@
 		for (var j = 0; j < d.length; j++) if (d[j].lang && d[j].lang.toLowerCase().indexOf(dasar) === 0) return d[j];
 		return null;
 	}
-	function berhentiBicara() { if (TTS) window.speechSynthesis.cancel(); hentiMulut(); }
+	var audioXtts = null;                           // suara XTTS yang sedang diputar (bila server XTTS dipasang)
+	function berhentiBicara() {
+		if (TTS) window.speechSynthesis.cancel();
+		if (audioXtts) { try { audioXtts.onended = audioXtts.onerror = audioXtts.onplay = null; audioXtts.pause(); } catch (e) { /* abaikan */ } audioXtts = null; }
+		hentiMulut();
+	}
 
 	// Ucapkan teks sambil menggerakkan mulut. Return Promise yang selesai tepat sekali.
 	function ucapkan(teks, kodeBahasa) {
@@ -302,13 +307,28 @@
 			var usai = false, pengaman = null;
 			function akhir() { if (usai) return; usai = true; clearTimeout(pengaman); hentiMulut(); setPose("diam"); selesai(); }
 			var perkiraan = Math.max(2500, teks.length * 95);
-			pengaman = setTimeout(function () { if (TTS) window.speechSynthesis.cancel(); akhir(); }, perkiraan + 5000);   // beberapa browser tidak memanggil onend
-			if (!TTS) { mulaiMulut(); pengaman = setTimeout(akhir, perkiraan); return; }
-			var u = new SpeechSynthesisUtterance(teks), kode = BAHASA[kodeBahasa || bahasa].suara;
-			u.lang = kode; var v = pilihSuara(kode); if (v) u.voice = v;
-			u.rate = mode === "preman" ? 1.05 : (mode === "professional" ? 0.95 : 0.85);
-			u.onstart = mulaiMulut; u.onend = akhir; u.onerror = akhir;
-			window.speechSynthesis.speak(u);
+			var xtts = B.xtts === "1" && (kodeBahasa || bahasa) === "tetun";   // XTTS hanya untuk jawaban Tetun
+			pengaman = setTimeout(function () { berhentiBicara(); akhir(); }, perkiraan + (xtts ? 20000 : 5000));   // beberapa browser tidak memanggil onend
+
+			function bicaraBrowser() {
+				if (usai) return;
+				if (!TTS) { mulaiMulut(); clearTimeout(pengaman); pengaman = setTimeout(akhir, perkiraan); return; }
+				var u = new SpeechSynthesisUtterance(teks), kode = BAHASA[kodeBahasa || bahasa].suara;
+				u.lang = kode; var v = pilihSuara(kode); if (v) u.voice = v;
+				u.rate = mode === "preman" ? 1.05 : (mode === "professional" ? 0.95 : 0.85);
+				u.onstart = mulaiMulut; u.onend = akhir; u.onerror = akhir;
+				window.speechSynthesis.speak(u);
+			}
+			if (!xtts) { bicaraBrowser(); return; }
+			fetch(B.tts, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ teks: teks.slice(0, 300) }) })
+				.then(function (r) { if (!r.ok) throw new Error("tts"); return r.blob(); })
+				.then(function (blob) {
+					if (usai) return;
+					var a = new Audio(URL.createObjectURL(blob)); audioXtts = a;
+					a.onplay = mulaiMulut; a.onended = akhir; a.onerror = function () { audioXtts = null; bicaraBrowser(); };
+					return a.play();
+				})
+				.catch(function () { audioXtts = null; bicaraBrowser(); });       // XTTS mati/lambat: pakai suara browser, panggilan tidak terhenti
 		});
 	}
 

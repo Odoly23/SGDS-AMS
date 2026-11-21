@@ -5,16 +5,19 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.http import JsonResponse
+import hashlib
+
+from django.db.models import Count, Q, Sum
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from ai import llm
+from ai import llm, suara
 from ai.models import Giliran
 from config.decorators import allowed_users
-from config.user_utils import SEMUA_GRUP, nama_grup
+from config.user_utils import GRUP_ADMIN, SEMUA_GRUP, nama_grup
 from custom.models import KarakterAI
 from users.models import Perfil
 
@@ -122,7 +125,7 @@ def VideoCall(request):
 	"""Halaman panggilan: bicara langsung dengan LAFEX, tangan bebas, sampai waktu habis. Mode/bahasa/topik/menit dari URL."""
 	return render(request, 'ai/video_call.html', {
 		'maks_teks': settings.AI['MAKS_TEKS'], 'demo': settings.AI['BACKEND'] == 'dummy',
-		'menit_bawaan': MENIT_BAWAAN, 'menit_maks': MENIT_MAKS,
+		'menit_bawaan': MENIT_BAWAAN, 'menit_maks': MENIT_MAKS, 'xtts': suara.tts_siap(),
 	})
 
 
@@ -165,3 +168,54 @@ def Hapus(request):
 	"""User menghapus riwayat percakapannya sendiri."""
 	n, _ = Giliran.objects.filter(user=request.user).delete()
 	return JsonResponse({'ok': True, 'dihapus': n})
+
+
+# ---------------------------------------------------------------- Suara: XTTS (teks -> suara) dan halaman status admin
+@login_required
+@allowed_users(allowed_roles=SEMUA_GRUP)
+@require_POST
+def Tts(request):
+	"""Teks -> suara WAV lewat XTTS milik sendiri. Bila XTTS belum diatur: 503, dan halaman memakai suara bawaan browser."""
+	cfg = settings.SUARA
+	if not suara.tts_siap():
+		return JsonResponse({'ok': False, 'kode': 'mati'}, status=503)
+	try:
+		teks = str(json.loads(request.body or b'{}').get('teks', '')).strip()
+	except ValueError:
+		teks = ''
+	if not teks or len(teks) > cfg['TTS_MAKS_TEKS']:
+		return JsonResponse({'ok': False, 'kode': 'tidak_valid'}, status=400)
+	kunci = hashlib.sha256(f"{cfg['TTS_BAHASA']}|{cfg['TTS_SUARA']}|{teks}".encode()).hexdigest()
+	audio = cache.get('tts:' + kunci)                                     # kalimat yang sama tidak perlu menghitung ulang di GPU
+	if audio is None:
+		batas = f'tts-menit:{request.user.pk}'
+		cache.add(batas, 0, 60)
+		if cache.incr(batas) > cfg['TTS_BATAS_MENIT']:
+			return JsonResponse({'ok': False, 'kode': 'laju'}, status=429)
+		try:
+			audio = suara.sintesis(teks)
+		except suara.SuaraGagal:
+			return JsonResponse({'ok': False, 'kode': 'galat'}, status=503)
+		cache.set('tts:' + kunci, audio, 86400)
+	return HttpResponse(audio, content_type='audio/wav')
+
+
+@login_required
+@allowed_users(allowed_roles=[GRUP_ADMIN])
+def SuaraAdmin(request):
+	"""Admin: status Whisper/XTTS dan kesiapan data latihan per bahasa (hanya yang disetujui + punya transkripsi BUKAN draf Whisper)."""
+	from crowdsource.models import RekamanSuara
+	cfg = settings.SUARA
+	siap = RekamanSuara.objects.filter(status='disetujui').exclude(transkripsi='').exclude(sumber_transkripsi='otomatis')
+	per_bahasa = list(siap.values('bahasa__nama').annotate(n=Count('id'), detik=Sum('durasi_detik')).order_by('-n'))
+	for b in per_bahasa:
+		b['menit'] = round((b['detik'] or 0) / 60, 1)
+	context = {
+		'group': nama_grup(request.user), 'page': 'tinjau', 'title': 'Suara & Model',
+		'stt': {'url': cfg['STT_URL'], 'model': cfg['STT_MODEL'], 'status': suara.cek(cfg['STT_URL'])},
+		'tts': {'url': cfg['TTS_URL'], 'bahasa': cfg['TTS_BAHASA'], 'status': suara.cek(cfg['TTS_URL'])},
+		'per_bahasa': per_bahasa, 'total_menit': round(sum((b['detik'] or 0) for b in per_bahasa) / 60, 1),
+		'draf': RekamanSuara.objects.filter(sumber_transkripsi='otomatis').count(),
+		'tanpa': RekamanSuara.objects.filter(status='disetujui', transkripsi='').count(),
+	}
+	return render(request, 'ai/suara_admin.html', context)

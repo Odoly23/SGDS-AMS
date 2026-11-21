@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from belajar.models import Kalimat
 from config.decorators import allowed_users
 from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, nama_grup
+from ai import suara
 from crowdsource.models import RekamanSuara
 from crowdsource.utils import jenis_audio
 from custom.models import Bahasa, KarakterAI
@@ -132,7 +133,7 @@ def Kontribusiku(request):
 		'group': nama_grup(request.user), 'page': 'mine', 'title': 'Ha\'u nia kontribuisaun',
 		'total': sum(hitung.values()), 'menunggu': hitung.get('menunggu', 0), 'disetujui': hitung.get('disetujui', 0),
 		'ditolak': hitung.get('ditolak', 0), 'per_bahasa': per_bahasa,
-		'terakhir': milik.select_related('bahasa', 'kalimat', 'gaya').order_by('-datetime')[:30],
+		'terakhir': milik.select_related('bahasa', 'kalimat', 'gaya').order_by('-datetime')[:30], 'tts_siap': suara.tts_siap(),
 	}
 	return render(request, 'crowdsource/kontribusiku.html', context)
 
@@ -157,10 +158,43 @@ def Tinjau(request):
 	hal = Paginator(qs.order_by('datetime'), 15).get_page(request.GET.get('hal'))
 	context = {
 		'group': nama_grup(request.user), 'page': 'tinjau', 'title': 'Revisaun audio', 'status': status, 'bahasa': bahasa,
-		'halaman': hal, 'bahasa_list': Bahasa.objects.filter(rekaman__isnull=False).distinct(),
+		'halaman': hal, 'stt_siap': suara.stt_siap(), 'bahasa_list': Bahasa.objects.filter(rekaman__isnull=False).distinct(),
 		'jumlah': {s: RekamanSuara.objects.filter(status=s).count() for s in ('menunggu', 'disetujui', 'ditolak')},
 	}
 	return render(request, 'crowdsource/tinjau.html', context)
+
+
+def _whisper(r):
+	"""Whisper membuat DRAF transkripsi (belum diperiksa). Return True bila ada teks."""
+	with r.audio.open('rb') as f:
+		isi = f.read()
+	teks = suara.transkripsi(isi, nama=r.audio.name.rsplit('/', 1)[-1], tipe=r.mime_type or 'audio/webm')[:1000]
+	if not teks:
+		return False
+	r.transkripsi, r.sumber_transkripsi = teks, 'otomatis'
+	r.save(update_fields=['transkripsi', 'sumber_transkripsi'])
+	return True
+
+
+@login_required
+@allowed_users(allowed_roles=ADMIN)
+@require_POST
+def WhisperSemua(request):
+	"""Whisper untuk rekaman yang masih menunggu dan belum punya transkripsi (satu batch kecil, supaya tidak menggantung)."""
+	if not suara.stt_siap():
+		messages.error(request, 'err_stt_off')
+		return redirect('crowdsource-tinjau')
+	batch = settings.SUARA['WHISPER_BATCH']
+	ok = 0
+	for r in RekamanSuara.objects.filter(status='menunggu', transkripsi='').order_by('datetime')[:batch]:
+		try:
+			ok += bool(_whisper(r))
+		except suara.SuaraGagal:
+			messages.error(request, 'err_stt')
+			break
+	if ok:
+		messages.success(request, 'msg_saved')
+	return redirect('crowdsource-tinjau')
 
 
 def _kembali(request):
@@ -183,7 +217,19 @@ def TinjauAksi(request, pk):
 		r.tinjau('ditolak', request.user, request.POST.get('alasan', '').strip()[:200] or 'Ditolak admin')
 	elif aksi == 'transkripsi':
 		r.transkripsi = request.POST.get('transkripsi', '').strip()[:1000]
-		r.save(update_fields=['transkripsi'])
+		r.sumber_transkripsi = 'admin' if r.transkripsi else ''          # diperiksa/ditulis admin: boleh dipakai melatih
+		r.save(update_fields=['transkripsi', 'sumber_transkripsi'])
+	elif aksi == 'whisper':
+		if r.sumber_transkripsi == 'admin':
+			messages.error(request, 'err_stt_locked')
+			return _kembali(request)
+		try:
+			if not _whisper(r):
+				messages.warning(request, 'err_stt_empty')
+				return _kembali(request)
+		except suara.SuaraGagal:
+			messages.error(request, 'err_stt')
+			return _kembali(request)
 	elif aksi == 'matikan':
 		# nonaktifkan akun pengirim (kecuali admin) dan tolak semua rekamannya yang masih menunggu
 		ids = Perfil.objects.filter(kode_anonim=r.pengirim_kode).values_list('user_id', flat=True) if r.pengirim_kode else []
@@ -206,3 +252,19 @@ def Audio(request, pk):
 	if not r.audio:
 		raise Http404
 	return FileResponse(r.audio.open('rb'), content_type=r.mime_type or 'application/octet-stream')
+
+
+@login_required
+@allowed_users(allowed_roles=BOLEH)
+@require_POST
+def KontribTranskripsi(request, pk):
+	"""Kontributor (penutur asli) menulis apa yang ia ucapkan di rekamannya SENDIRI. Yang sudah diperiksa admin terkunci."""
+	r = get_object_or_404(RekamanSuara, pk=pk, pengirim_kode=_kode(request.user))
+	if r.status == 'ditolak' or r.sumber_transkripsi == 'admin':
+		messages.error(request, 'err_tr_locked')
+		return redirect('crowdsource-mine')
+	r.transkripsi = request.POST.get('transkripsi', '').strip()[:1000]
+	r.sumber_transkripsi = 'kontributor' if r.transkripsi else ''
+	r.save(update_fields=['transkripsi', 'sumber_transkripsi'])
+	messages.success(request, 'msg_saved')
+	return redirect('crowdsource-mine')

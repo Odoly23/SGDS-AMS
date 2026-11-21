@@ -119,6 +119,19 @@
   });
 
   // ---- pilihan tersimpan dari kunjungan sebelumnya ----
+  // ---- contoh suara kalimat: XTTS milik sendiri bila sudah dipasang; bila tidak, suara browser (tidak ada suara Tetun: pt-PT sebagai pendekatan) ----
+  function putarContoh() {
+    var teks = $("k-tet").textContent.trim().slice(0, 300); if (!teks) return;
+    function browser() {
+      try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(teks); u.lang = "pt-PT"; speechSynthesis.speak(u); } catch (e) { /* tanpa suara */ }
+    }
+    fetch(root.dataset.tts, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": LafexRekam.csrf() }, body: JSON.stringify({ teks: teks }) })
+      .then(function (r) { if (!r.ok) throw new Error("tts"); return r.blob(); })
+      .then(function (b) { var a = new Audio(URL.createObjectURL(b)); return a.play(); })
+      .catch(browser);
+  }
+  if ($("contoh")) $("contoh").addEventListener("click", putarContoh);
+
   var tersimpan = bacaPilihan();
   if (tersimpan && tersimpan.bahasa && tersimpan.gaya && document.querySelector(".pilih-lian[data-kode='" + tersimpan.bahasa + "']") && document.querySelector(".pilih-gaya[data-kode='" + tersimpan.gaya + "']")) {
     st.bahasa = tersimpan.bahasa; st.nama = tersimpan.nama; st.gaya = tersimpan.gaya; st.gayaNama = tersimpan.gayaNama;

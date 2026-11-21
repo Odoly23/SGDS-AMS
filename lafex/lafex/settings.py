@@ -94,7 +94,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v7"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v8"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
 
 # ---------- Percakapan suara dengan AI (ai_chat) ----------
 # BACKEND: "dummy" = balasan contoh | "local" = model gratis/open-source (Gemma dll, server Ollama/llama.cpp/vLLM) | "anthropic" = model berbayar lewat API (Anda membayar per token).
@@ -116,4 +116,22 @@ AI = {
 	"MAKS_TEKS": 500,
 	"RIWAYAT_GILIRAN": 6,                                           # berapa giliran terakhir dikirim sebagai konteks
 	"RIWAYAT_JAM": 6,                                               # konteks hanya dari 6 jam terakhir
+}
+
+
+# ---------- Suara: Whisper (STT) dan XTTS (TTS) milik sendiri. Kosong = mati. Lihat docs/MELATIH_SUARA.md ----------
+SUARA = {
+	"STT_URL": os.getenv("STT_URL", ""),                 # mis. http://127.0.0.1:8000/v1  (faster-whisper-server / whisper.cpp / LocalAI)
+	"STT_MODEL": os.getenv("STT_MODEL", "whisper-1"),     # nama model di server Anda (mis. hasil fine-tune Tetun Anda)
+	"STT_KUNCI": os.getenv("STT_KEY", ""),
+	"STT_BAHASA": os.getenv("STT_BAHASA", ""),            # kosong = deteksi otomatis (Whisper bawaan TIDAK punya Tetun)
+	"STT_TIMEOUT": int(os.getenv("STT_TIMEOUT", "120")),
+	"TTS_URL": os.getenv("TTS_URL", ""),                 # mis. http://127.0.0.1:8020/tts_to_audio/  (xtts-api-server)
+	"TTS_SUARA": os.getenv("TTS_SUARA", "lafex"),         # nama/berkas suara pembicara di server XTTS
+	"TTS_BAHASA": os.getenv("TTS_BAHASA", "pt"),          # XTTS bawaan tidak punya Tetun: pt = pendekatan, ganti setelah fine-tune
+	"TTS_KUNCI": os.getenv("TTS_KEY", ""),
+	"TTS_TIMEOUT": int(os.getenv("TTS_TIMEOUT", "60")),
+	"TTS_MAKS_TEKS": 300,
+	"TTS_BATAS_MENIT": 20,                               # permintaan suara per user per menit (melindungi GPU)
+	"WHISPER_BATCH": 15,                                 # maksimal rekaman sekali "Whisper semua"
 }

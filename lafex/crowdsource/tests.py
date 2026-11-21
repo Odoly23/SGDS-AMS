@@ -368,3 +368,217 @@ class KontribusikuDanTinjau(Unggah):
 			self.assertEqual(resp['Location'], '/crowdsource/tinjau/', tujuan)
 		resp = self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'transkripsi', 'transkripsi': 'x', 'kembali': '/crowdsource/tinjau/?status=semua'})
 		self.assertEqual(resp['Location'], '/crowdsource/tinjau/?status=semua')
+
+
+import json
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+from django.conf import settings
+from django.core.cache import cache
+
+from ai import suara
+
+
+class ServerSuaraPalsu(BaseHTTPRequestHandler):
+	"""Meniru Whisper (/audio/transcriptions) dan XTTS (/tts) lewat HTTP sungguhan di localhost."""
+	catatan = []
+
+	def log_message(self, *a):
+		pass
+
+	def do_POST(self):
+		isi = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+		ServerSuaraPalsu.catatan.append((self.path, self.headers.get('Content-Type', ''), isi))
+		if self.path.endswith('/audio/transcriptions'):
+			if b'RUSAK' in isi:
+				self.send_response(500); self.end_headers(); return
+			teks = '' if b'HENING' in isi else 'bondia ha u naran Ana'
+			self.send_response(200); self.send_header('Content-Type', 'application/json'); self.end_headers()
+			self.wfile.write(json.dumps({'text': teks}).encode())
+		elif self.path == '/tts':
+			self.send_response(200); self.send_header('Content-Type', 'audio/wav'); self.end_headers()
+			self.wfile.write(b'RIFF' + b'\x00' * 40)
+		else:
+			self.send_response(404); self.end_headers()
+
+	def do_GET(self):
+		self.send_response(200); self.end_headers()
+
+
+class Suara(Unggah):
+	"""Whisper (draf transkripsi), XTTS (contoh suara), halaman admin, ekspor data latihan."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.srv = HTTPServer(('127.0.0.1', 0), ServerSuaraPalsu)
+		threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+		cls.url = f'http://127.0.0.1:{cls.srv.server_port}'
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.srv.shutdown(); cls.srv.server_close()
+		super().tearDownClass()
+
+	def setUp(self):
+		super().setUp()
+		ServerSuaraPalsu.catatan.clear()
+		self.adm = user_grup('adm1', 'admin')
+		self.cfg = override_settings(SUARA={**settings.SUARA, 'STT_URL': self.url, 'TTS_URL': self.url + '/tts'}, MEDIA_ROOT=self.media)
+		self.cfg.enable()
+
+	def tearDown(self):
+		self.cfg.disable()
+
+	def _buat(self, isi=WEBM, status='menunggu', **kw):
+		return RekamanSuara.objects.create(
+			kalimat=self.kal, bahasa=Bahasa.objects.get(kode='fataluku'), gaya=KarakterAI.objects.get(kode='sopan'), status=status, durasi_detik=3.0,
+			audio=SimpleUploadedFile('x.webm', isi, content_type='audio/webm'), pengirim_kode=self.k.perfil.kode_anonim, **kw)
+
+	# ---- klien ----
+	def test_klien_whisper_dan_xtts_lewat_http_sungguhan(self):
+		self.assertEqual(suara.transkripsi(WEBM), 'bondia ha u naran Ana')
+		path, ctype, isi = ServerSuaraPalsu.catatan[-1]
+		self.assertTrue(ctype.startswith('multipart/form-data; boundary='))
+		self.assertIn(b'name="model"', isi); self.assertIn(WEBM, isi)
+		self.assertEqual(suara.sintesis('Bondia')[:4], b'RIFF')
+		self.assertEqual(suara.cek(self.url), 'hidup')
+		self.assertEqual(suara.cek(''), 'belum diatur')
+		self.assertEqual(suara.cek('http://127.0.0.1:1'), 'mati')
+
+	def test_klien_mati_atau_belum_diatur(self):
+		with override_settings(SUARA={**settings.SUARA, 'STT_URL': '', 'TTS_URL': ''}):
+			for f in (lambda: suara.transkripsi(WEBM), lambda: suara.sintesis('x')):
+				with self.assertRaises(suara.SuaraGagal):
+					f()
+		with override_settings(SUARA={**settings.SUARA, 'STT_URL': 'http://127.0.0.1:1', 'TTS_URL': 'http://127.0.0.1:1/x'}):
+			for f in (lambda: suara.transkripsi(WEBM), lambda: suara.sintesis('x')):
+				with self.assertRaises(suara.SuaraGagal):
+					f()
+
+	# ---- admin: Whisper di halaman Tinjau ----
+	def test_whisper_membuat_draf_dan_admin_memeriksanya(self):
+		r = self._buat()
+		self.client.force_login(self.adm)
+		self.assertContains(self.client.get('/crowdsource/tinjau/'), 'name="aksi" value="whisper"')
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'whisper'})
+		r.refresh_from_db()
+		self.assertEqual((r.transkripsi, r.sumber_transkripsi), ('bondia ha u naran Ana', 'otomatis'))
+		self.assertContains(self.client.get('/crowdsource/tinjau/'), 'Draf Whisper')
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'transkripsi', 'transkripsi': "Bondia, ha'u naran Ana"})
+		r.refresh_from_db()
+		self.assertEqual(r.sumber_transkripsi, 'admin')                         # ditulis/diperiksa manusia
+		self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'whisper'})   # tidak boleh menimpa yang sudah diperiksa
+		r.refresh_from_db()
+		self.assertEqual((r.transkripsi, r.sumber_transkripsi), ("Bondia, ha'u naran Ana", 'admin'))
+
+	def test_whisper_gagal_atau_hening_tidak_mengubah_apa_pun(self):
+		bisu, rusak = self._buat(isi=WEBM + b'HENING'), self._buat(isi=WEBM + b'RUSAK')
+		self.client.force_login(self.adm)
+		for r in (bisu, rusak):
+			self.client.post(f'/crowdsource/tinjau/{r.pk}/', {'aksi': 'whisper'})
+			r.refresh_from_db()
+			self.assertEqual((r.transkripsi, r.sumber_transkripsi), ('', ''))
+		with override_settings(SUARA={**settings.SUARA, 'STT_URL': ''}):
+			self.assertNotContains(self.client.get('/crowdsource/tinjau/'), 'value="whisper"')
+			self.assertEqual(self.client.post('/crowdsource/tinjau/whisper-semua/').status_code, 302)
+
+	def test_whisper_semua_hanya_yang_menunggu_dan_belum_ada_teks(self):
+		a, b = self._buat(), self._buat(status='disetujui')
+		c = self._buat(transkripsi='sudah ada', sumber_transkripsi='kontributor')
+		self.client.force_login(self.adm)
+		self.client.post('/crowdsource/tinjau/whisper-semua/')
+		for r in (a, b, c):
+			r.refresh_from_db()
+		self.assertEqual([a.sumber_transkripsi, b.sumber_transkripsi, c.sumber_transkripsi], ['otomatis', '', 'kontributor'])
+		self.client.force_login(self.k)
+		self.client.post('/crowdsource/tinjau/whisper-semua/')                  # bukan admin: tidak ada efek
+		self.assertEqual(len(ServerSuaraPalsu.catatan), 1)
+
+	# ---- kontributor menulis ucapannya sendiri ----
+	def test_kontributor_menulis_transkripsi_miliknya_saja(self):
+		r = self._buat()
+		lain = user_grup('lain', 'kontributor')
+		self.assertContains(self.client.get('/crowdsource/kontribusiku/'), f'/crowdsource/kontribusiku/{r.pk}/transkripsi/')
+		self.client.post(f'/crowdsource/kontribusiku/{r.pk}/transkripsi/', {'transkripsi': 'Bondia dia'})
+		r.refresh_from_db()
+		self.assertEqual((r.transkripsi, r.sumber_transkripsi), ('Bondia dia', 'kontributor'))
+		self.client.force_login(lain)
+		self.assertEqual(self.client.post(f'/crowdsource/kontribusiku/{r.pk}/transkripsi/', {'transkripsi': 'curang'}).status_code, 404)
+		self.client.force_login(self.k)
+		self.client.post(f'/crowdsource/kontribusiku/{r.pk}/transkripsi/', {'transkripsi': ''})        # menghapus
+		r.refresh_from_db()
+		self.assertEqual((r.transkripsi, r.sumber_transkripsi), ('', ''))
+		r.transkripsi, r.sumber_transkripsi = 'diperiksa', 'admin'; r.save()
+		self.client.post(f'/crowdsource/kontribusiku/{r.pk}/transkripsi/', {'transkripsi': 'ubah'})   # terkunci setelah diperiksa admin
+		r.refresh_from_db()
+		self.assertEqual(r.transkripsi, 'diperiksa')
+		self.client.force_login(user_grup('p', 'pelajar'))
+		self.assertIn('Página não encontrada', self.client.post(f'/crowdsource/kontribusiku/{r.pk}/transkripsi/', {'transkripsi': 'x'}).content.decode())
+
+	# ---- XTTS ----
+	def test_tts_mengembalikan_wav_memakai_cache_dan_dibatasi(self):
+		def tts(teks='Bondia'):
+			return self.client.post('/ai/tts/', json.dumps({'teks': teks}), content_type='application/json')
+		r = tts()
+		self.assertEqual((r.status_code, r['Content-Type'], r.content[:4]), (200, 'audio/wav', b'RIFF'))
+		tts()
+		self.assertEqual(len([c for c in ServerSuaraPalsu.catatan if c[0] == '/tts']), 1)    # kalimat sama: dari cache, GPU tidak dipakai lagi
+		self.assertEqual(tts('').status_code, 400)
+		self.assertEqual(tts('x' * 301).status_code, 400)
+		with override_settings(SUARA={**settings.SUARA, 'TTS_URL': ''}):
+			self.assertEqual(tts().status_code, 503)                                        # halaman lalu memakai suara browser
+		with override_settings(SUARA={**settings.SUARA, 'TTS_BATAS_MENIT': 2}):
+			cache.clear()
+			self.assertEqual([tts(f'k{i}').status_code for i in range(3)], [200, 200, 429])
+		self.client.logout()
+		self.assertEqual(tts().status_code, 302)
+
+	def test_halaman_video_call_dan_rekam_tahu_xtts(self):
+		self.assertContains(self.client.get('/video-call/'), 'data-xtts="1"')
+		self.assertContains(self.client.get('/crowdsource/'), 'data-tts="/ai/tts/"')
+		with override_settings(SUARA={**settings.SUARA, 'TTS_URL': ''}):
+			self.assertContains(self.client.get('/video-call/'), 'data-xtts="0"')
+
+	# ---- halaman admin Suara & Model + ekspor ----
+	def test_halaman_suara_admin_dan_hak_akses(self):
+		self._buat(status='disetujui', transkripsi='Bondia', sumber_transkripsi='admin')
+		self._buat(status='disetujui', transkripsi='draf', sumber_transkripsi='otomatis')
+		self.client.force_login(self.adm)
+		r = self.client.get('/ai/suara/')
+		self.assertEqual((r.context['stt']['status'], r.context['tts']['status'], r.context['draf']), ('hidup', 'hidup', 1))
+		self.assertEqual(r.context['per_bahasa'][0]['n'], 1)                                # draf Whisper tidak dihitung sebagai data latihan
+		for u in (self.k, user_grup('p', 'pelajar')):
+			self.client.force_login(u)
+			self.assertIn('Página não encontrada', self.client.get('/ai/suara/').content.decode())
+
+	def test_ekspor_hanya_disetujui_dan_bukan_draf_tanpa_data_pribadi(self):
+		import shutil
+		import subprocess
+		import tempfile
+		if not shutil.which('ffmpeg'):
+			self.skipTest('ffmpeg tidak ada')
+		wav = os.path.join(self.media, 'asli.wav')
+		subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', wav], check=True)
+		isi = open(wav, 'rb').read()
+		baik = self._buat(isi=isi, status='disetujui', transkripsi='Bondia | dia', sumber_transkripsi='kontributor')
+		self._buat(isi=isi, status='disetujui', transkripsi='draf', sumber_transkripsi='otomatis')
+		self._buat(isi=isi, status='menunggu', transkripsi='belum', sumber_transkripsi='admin')
+		self._buat(isi=isi, status='ditolak', transkripsi='tolak', sumber_transkripsi='admin')
+		out = tempfile.mkdtemp()
+		call_command('export_suara', out=out, bahasa='fataluku', stdout=mock_stdout())
+		baris = [json.loads(b) for b in open(os.path.join(out, 'whisper', 'train.jsonl'), encoding='utf-8')]
+		self.assertEqual([(b['audio'], b['text']) for b in baris], [(f'wavs/r{baik.pk}.wav', 'Bondia dia')])
+		meta = open(os.path.join(out, 'xtts', 'metadata.csv'), encoding='utf-8').read().splitlines()
+		self.assertEqual(meta, ['audio_file|text|speaker_name', f'wavs/r{baik.pk}.wav|Bondia dia|lafex'])
+		self.assertTrue(os.path.exists(os.path.join(out, 'whisper', 'wavs', f'r{baik.pk}.wav')))
+		self.assertTrue(os.path.exists(os.path.join(out, 'xtts', 'wavs', f'r{baik.pk}.wav')))
+		for berkas in (os.path.join(out, 'whisper', 'train.jsonl'), os.path.join(out, 'xtts', 'metadata.csv')):
+			self.assertNotIn(self.k.perfil.kode_anonim, open(berkas, encoding='utf-8').read())     # tanpa kode pengirim
+
+
+def mock_stdout():
+	import io
+	return io.StringIO()
