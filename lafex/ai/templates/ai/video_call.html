@@ -1,0 +1,602 @@
+{% load static %}<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#C8201A">
+<title>LAFEX - Telefone / Video Call</title>
+<link rel="icon" type="image/png" href="{% static 'main/icons/icon-192.png' %}">
+<link rel="stylesheet" href="{% static 'main/css/main.css' %}">
+<style>
+	/* Pakai warna & huruf LAFEX dari main.css (--navy merah, --navy-dk hitam, --kuning, --kain krem). Halaman layar penuh tanpa navbar. */
+	html, body { height: 100%; overflow: hidden; }
+	body { padding-top: 0; background: var(--navy-dk); }
+	button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+	.vc { position: fixed; inset: 0; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; background: var(--kain); }
+	.vc .topbar { position: relative; flex: none; }                      /* pita tais di semua halaman */
+
+	/* Bar merah: kembali · waktu · poin */
+	.vc-bar { flex: none; background: var(--navy); color: var(--white); border-bottom: 3px solid var(--white); padding: 6px 10px 8px; z-index: 5; }
+	.vc-bar .baris { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+	.vc-kembali { background: rgba(255,255,255,.2); border-radius: 12px; padding: 8px 12px; font-weight: 900; font-size: 15px; min-height: 44px; }
+	.vc-waktu { font-weight: 900; font-size: 22px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+	.vc-waktu.sedikit { color: var(--kuning); animation: kedip 1s infinite; }
+	.vc-poin { background: var(--kuning); color: var(--navy-dk); border-radius: 12px; padding: 7px 11px; font-weight: 900; font-size: 15px; white-space: nowrap; }
+	.vc-info { text-align: center; font-weight: 900; font-size: 14px; margin-top: 4px; }
+	.vc-info i { color: var(--kuning); font-style: normal; animation: kedip 1.2s infinite; }
+	.vc-info small { display: block; font-weight: 700; opacity: .92; font-size: 13px; }
+	@keyframes kedip { 50% { opacity: .25; } }
+
+	/* Panggung: gambar LAFEX besar */
+	.vc-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: var(--kuning) radial-gradient(circle at 50% 35%, #ffe08a, var(--kuning) 70%); }
+	#lafex-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 30%; }
+	#lafex-img[hidden] { display: none; }
+	/* Maskot lafaek bawaan: dipakai bila 12 gambar PNG belum ada */
+	#maskot { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(62vw, 36vh); height: min(62vw, 36vh); border-radius: 50%;
+		background: var(--navy); border: 8px solid var(--white); box-shadow: 0 9px 0 rgba(27,20,17,.9), 0 14px 28px rgba(0,0,0,.28); display: none; align-items: center; justify-content: center; }
+	#maskot .badan { position: relative; display: block; width: 78%; height: 78%; transform-origin: 50% 85%; }
+	#maskot .badan img { position: absolute; inset: 0; width: 100%; height: 100%; }
+	#fb-emoji { position: absolute; top: -18px; right: -14px; font-size: 3rem; line-height: 1; }
+	#maskot[data-keadaan="bicara"][data-gaya="preman"] .badan { animation: sikap-bandidu .52s ease-in-out infinite; }
+	#maskot[data-keadaan="bicara"][data-gaya="sopan"] .badan { animation: sikap-respeitozu 1.6s ease-in-out infinite; }
+	#maskot[data-keadaan="bicara"][data-gaya="profesional"] .badan { animation: sikap-matenek 1.1s ease-in-out infinite; }
+	#maskot[data-keadaan="dengar"] .badan { animation: dengar-matenek 2.4s ease-in-out infinite; }
+	#maskot[data-keadaan="pikir"] .badan { animation: pikir-umum 1.6s ease-in-out infinite; }
+	#maskot[data-keadaan="dengar"] { background: #9E1812; }
+
+	/* Subtitle */
+	.vc-sub { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 4; background: rgba(27,20,17,.88); color: var(--white); border-radius: 18px; padding: 10px 14px; max-height: 44%; overflow-y: auto; box-shadow: 0 4px 0 rgba(0,0,0,.35); }
+	#kamu { font-size: 14px; color: var(--kuning); margin-bottom: 4px; display: none; }
+	#kamu.ada { display: block; }
+	#subtitle { font-size: 20px; line-height: 1.35; font-weight: 800; }
+	#terjemahan { font-size: 14px; opacity: .8; margin-top: 3px; }
+	#koreksi { font-size: 15px; font-weight: 800; margin-top: 6px; background: var(--kuning); color: var(--navy-dk); border-radius: 10px; padding: 4px 9px; display: none; }
+	#koreksi.ada { display: block; }
+	.vc-peringatan { position: absolute; top: 8px; left: 10px; right: 10px; z-index: 6; background: var(--kuning); color: var(--navy-dk); font-weight: 900; text-align: center; border-radius: 12px; padding: 6px 10px; font-size: 14px; display: none; box-shadow: 0 3px 0 rgba(27,20,17,.9); }
+	.vc-peringatan.ada { display: block; }
+
+	/* Kontrol bawah (gaya kartu LAFEX: tebal, bayangan hitam di bawah) */
+	.vc-kontrol { flex: none; background: var(--kain); border-top: 3px solid var(--navy-dk); padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
+	.vc-mode { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+	.vc-mode button { background: var(--white); color: var(--navy-dk); border-radius: 14px; padding: 8px 2px; font-weight: 900; font-size: 13px; min-height: 46px; box-shadow: inset 0 0 0 3px var(--navy-dk), 0 4px 0 rgba(27,20,17,.9); }
+	.vc-mode button[aria-pressed="true"] { background: var(--navy); color: var(--white); box-shadow: inset 0 0 0 3px var(--kuning), 0 4px 0 rgba(27,20,17,.9); }
+	.vc-ketik { display: flex; gap: 8px; margin-bottom: 8px; }
+	#input { flex: 1; min-width: 0; background: var(--white); color: var(--navy-dk); border: 3px solid var(--navy-dk); border-radius: 14px; padding: 9px 12px; font: inherit; font-size: 16px; /* 16px: iPhone tidak zoom */ outline: none; }
+	#input:focus { border-color: var(--navy); }
+	#kirim { background: var(--kuning); color: var(--navy-dk); border-radius: 14px; width: 52px; flex: none; font-size: 20px; font-weight: 900; box-shadow: 0 4px 0 rgba(27,20,17,.9); }
+	.vc-aksi { display: flex; align-items: center; justify-content: space-around; gap: 6px; }
+	.vc-kecil { background: var(--white); color: var(--navy-dk); border-radius: 16px; min-width: 76px; min-height: 58px; font-size: 13px; font-weight: 900; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: inset 0 0 0 3px var(--navy-dk), 0 4px 0 rgba(27,20,17,.9); }
+	.vc-kecil span { font-size: 22px; line-height: 1; }
+	#tutup { background: var(--navy); color: var(--white); box-shadow: inset 0 0 0 3px var(--navy-dk), 0 4px 0 rgba(27,20,17,.9); }
+	#mik { width: 76px; height: 76px; border-radius: 50%; background: var(--kuning); font-size: 32px; border: 6px solid var(--white); box-shadow: 0 6px 0 rgba(27,20,17,.9); position: relative; }
+	#mik.nyala { background: var(--navy); animation: denyut 1.2s infinite; }
+	#mik.mati { background: #bdb3a6; }
+	@keyframes denyut { 50% { box-shadow: 0 6px 0 rgba(27,20,17,.9), 0 0 0 12px rgba(200,32,26,.25); } }
+	button:disabled { opacity: .45; }
+	button:focus-visible, input:focus-visible { outline: 4px solid var(--navy-dk); outline-offset: 2px; }
+	.vc-status { text-align: center; font-weight: 900; font-size: 14px; min-height: 20px; margin-bottom: 6px; }
+
+	/* Layar awal & akhir */
+	.vc-lapis { position: absolute; inset: 0; z-index: 20; background: rgba(27,20,17,.78); display: none; align-items: center; justify-content: center; padding: 18px; }
+	.vc-lapis.ada { display: flex; }
+	.vc-kartu { background: var(--kain); border-radius: 26px; border: 4px solid var(--navy-dk); box-shadow: 0 8px 0 rgba(27,20,17,.9); padding: 18px 16px; max-width: 420px; width: 100%; text-align: center; max-height: 100%; overflow-y: auto; }
+	.vc-kartu h2 { font-size: 22px; font-weight: 900; margin: 0 0 4px; }
+	.vc-kartu p { font-size: 14px; margin: 0 0 8px; }
+	.vc-menit { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+	.vc-menit button { background: var(--white); border-radius: 12px; padding: 6px 14px; font-weight: 900; box-shadow: inset 0 0 0 3px var(--navy-dk); }
+	.vc-menit button[aria-pressed="true"] { background: var(--navy-dk); color: var(--kuning); }
+	.vc-besar { display: block; width: 100%; background: var(--kuning); color: var(--navy-dk); border-radius: 20px; padding: 14px; font-size: 20px; font-weight: 900; box-shadow: inset 0 0 0 4px var(--navy-dk), 0 6px 0 rgba(27,20,17,.9); margin-bottom: 12px; }
+	.vc-besar.merah { background: var(--navy); color: var(--white); }
+	.vc-catatan { font-size: 12px; opacity: .75; }
+	.vc-demo { display: inline-block; background: var(--navy-dk); color: var(--kuning); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 900; margin-bottom: 8px; }
+	/* Pilihan di layar awal (bahasa, topik) dan menu kecil: semuanya di halaman yang sama */
+	.vc-chip { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+	.vc-chip button { background: var(--white); border-radius: 12px; padding: 5px 10px; font-weight: 900; font-size: 13px; box-shadow: inset 0 0 0 3px var(--navy-dk); min-height: 38px; flex: none; white-space: nowrap; }
+	#pil-topik { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding: 2px 2px 8px; -webkit-overflow-scrolling: touch; }
+	#mulai { position: sticky; bottom: -6px; z-index: 2; margin-bottom: 8px; }
+	.vc-chip button[aria-pressed="true"] { background: var(--navy-dk); color: var(--kuning); }
+	.vc-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; opacity: .7; margin: 4px 0 3px; }
+	.vc-menu-btn { background: rgba(255,255,255,.2); border-radius: 12px; padding: 8px 14px; font-weight: 900; font-size: 20px; min-height: 44px; min-width: 52px; }
+	.vc-menu a, .vc-menu button.item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--white); color: var(--navy-dk); text-decoration: none; border-radius: 16px; padding: 14px; margin-bottom: 10px; font-size: 18px; font-weight: 900; box-shadow: inset 0 0 0 3px var(--navy-dk), 0 4px 0 rgba(27,20,17,.9); }
+	.vc-menu .ikon { font-size: 26px; }
+	.vc-menu form { margin: 0; }
+	@media (max-height: 660px) { #subtitle { font-size: 17px; } #mik { width: 62px; height: 62px; font-size: 26px; } .vc-mode button { min-height: 40px; } .vc-kecil { min-height: 50px; } }
+</style>
+</head>
+<body data-chat="{% url 'lafex-chat' %}" data-img="{% static 'img/lafex/' %}"
+      data-svg="{% static 'main/images/' %}" data-demo="{% if demo %}1{% else %}0{% endif %}" data-xtts="{% if xtts %}1{% else %}0{% endif %}" data-tts="{% url 'ai-tts' %}"
+      data-langsung="{% if langsung %}1{% else %}0{% endif %}" data-menit="{{ menit_bawaan }}" data-menit-maks="{{ menit_maks }}" data-maks-teks="{{ maks_teks }}">
+<div class="vc">
+	<div class="topbar" aria-hidden="true"></div>
+
+	<div class="vc-bar">
+		<div class="baris">
+			{% if langsung %}<button class="vc-menu-btn" id="menu-buka" type="button" aria-label="Menu">☰</button>
+			{% else %}<button class="vc-kembali" id="kembali" type="button">&lsaquo; Kembali ke Beranda Siswa</button>{% endif %}
+			<div class="vc-waktu" id="waktu" aria-label="Sisa waktu">00:00</div>
+			<div class="vc-poin" id="poin">⭐ Poin: 0</div>
+		</div>
+		<div class="vc-info"><i>●</i> LIVE - LAFEX · <span id="nama-mode"></span><small id="topik"></small></div>
+	</div>
+
+	<div class="vc-stage">
+		<div class="vc-peringatan" id="peringatan" role="status"></div>
+		<img id="lafex-img" alt="LAFEX" hidden>
+		<div id="maskot" data-keadaan="diam" data-gaya="preman" aria-hidden="true">
+			<span class="badan"><img id="fb-lafaek" src="{% static 'main/images/lafaek.svg' %}" alt=""><img id="fb-aks" src="{% static 'main/images/aksesori-preman.svg' %}" alt=""></span>
+			<span id="fb-emoji"></span>
+		</div>
+
+		<div class="vc-sub" aria-live="polite">
+			<div id="kamu"></div>
+			<div id="subtitle"></div>
+			<div id="terjemahan"></div>
+			<div id="koreksi"></div>
+		</div>
+
+		<!-- Layar sebelum panggilan: sentuhan pertama dibutuhkan browser agar mikrofon dan suara boleh dipakai -->
+		<div class="vc-lapis ada" id="lapis-awal">
+			<div class="vc-kartu">
+				<h2>📞 Telefone ho LAFEX</h2>
+				<p>{% if langsung %}Pilihanmu diingat. Tinggal tekan <b>sekali</b>, lalu bicara.{% else %}Hili mode no durasaun, lalu tekan sekali.{% endif %} Mikrofon <b>menyala otomatis</b>, bicara seperti video call tanpa klik lagi.</p>
+				<div class="vc-label">Lian / Bahasa</div>
+				<div class="vc-chip" id="pil-bahasa" role="group" aria-label="Bahasa">
+					<button type="button" data-bahasa="tetun" aria-pressed="false">Tetun</button>
+					<button type="button" data-bahasa="portugues" aria-pressed="false">Português</button>
+					<button type="button" data-bahasa="inggris" aria-pressed="false">English</button>
+					<button type="button" data-bahasa="indonesia" aria-pressed="false">Indonesia</button>
+				</div>
+				<div class="vc-label">Topiku / Topik</div>
+				<div class="vc-chip" id="pil-topik" role="group" aria-label="Topik">
+					<button type="button" data-topik="bebas" aria-pressed="false">💬 Bebas</button>
+					{% for t in topik_list %}<button type="button" data-topik="{{ t.nilai }}" aria-pressed="false">{{ t.emoji }} {{ t.nama }}</button>{% endfor %}
+				</div>
+				<div class="vc-label">Durasaun / Durasi</div>
+				<div class="vc-menit" role="group" aria-label="Durasi">
+					<button type="button" data-menit="3" aria-pressed="false">3 min</button>
+					<button type="button" data-menit="5" aria-pressed="false">5 min</button>
+					<button type="button" data-menit="10" aria-pressed="false">10 min</button>
+				</div>
+				<button type="button" class="vc-besar" id="mulai">📞 MULAI PANGGILAN</button>
+				{% if demo %}<div class="vc-demo">MODE DEMO: jawaban contoh, bukan AI sungguhan</div>{% endif %}
+				<div class="vc-catatan">Pakai headset/earphone supaya mikrofon tidak mendengar suara LAFEX. Chrome/Edge di Android paling baik; butuh HTTPS.</div>
+			</div>
+		</div>
+
+		<!-- Layar setelah panggilan -->
+		<div class="vc-lapis" id="lapis-akhir">
+			<div class="vc-kartu">
+				<h2 id="akhir-judul">Obrigadu! Waktu habis</h2>
+				<p id="akhir-isi"></p>
+				<button type="button" class="vc-besar" id="ulang">📞 Telefone fali</button>
+				{% if langsung %}<button type="button" class="vc-besar merah" id="menu-buka2">☰ Menu</button>
+				{% else %}<button type="button" class="vc-besar merah" id="pulang">‹ Kembali ke Beranda Siswa</button>{% endif %}
+			</div>
+		</div>
+	</div>
+
+	{% if langsung %}
+	<div class="vc-lapis vc-menu" id="lapis-menu" style="position:fixed;z-index:40">
+		<div class="vc-kartu">
+			<h2>☰ Menu</h2>
+			<a href="{% url 'belajar-list' %}"><span class="ikon">📚</span> Aprende / Belajar</a>
+			<a href="{% url 'user-account' %}"><span class="ikon">👤</span> Konta / Akun</a>
+			{% if not tamu %}<a href="{% url 'user-ajukan' %}"><span class="ikon">🎤</span> Sai kontributór</a>{% endif %}
+			<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="item" type="submit"><span class="ikon">🚪</span> Sai / Keluar</button></form>
+			<button type="button" class="vc-besar" id="menu-tutup">✕ Tutup</button>
+		</div>
+	</div>
+	{% endif %}
+
+	<div class="vc-kontrol">
+		<div class="vc-status" id="status" aria-live="polite"></div>
+		<div class="vc-mode" role="group" aria-label="Mode LAFEX">
+			<button type="button" data-mode="preman" aria-pressed="false">😎 PREMAN</button>
+			<button type="button" data-mode="pintar" aria-pressed="false">🤓 PINTAR</button>
+			<button type="button" data-mode="professional" aria-pressed="false">👔 PROFESSIONAL</button>
+		</div>
+		<form class="vc-ketik" id="form" autocomplete="off">
+			<input id="input" type="text" maxlength="500" placeholder="Ketik di sini... / Hakerek iha ne'e..." aria-label="Pesan">
+			<button id="kirim" type="submit" aria-label="Kirim">➤</button>
+		</form>
+		<div class="vc-aksi">
+			<button class="vc-kecil" id="ulangi" type="button"><span>🔊</span>Ulangi</button>
+			<button id="mik" type="button" aria-label="Mikrofon nyala/mati" aria-pressed="true">🎤</button>
+			<button class="vc-kecil" id="tutup" type="button"><span>📞</span>Tutup</button>
+		</div>
+	</div>
+</div>
+
+<script>
+(function () {
+	"use strict";
+
+	// ---------------------------------------------------------------- PENGATURAN (dibaca dari <body data-...>)
+	var B = document.body.dataset;
+	var IMG_BASE = B.img, SVG_BASE = B.svg, URL_CHAT = B.chat;
+	var URL_SISWA = "/";                         // tujuan Kembali bila tidak ada halaman sebelumnya (ganti ke URL halaman Siswa)
+	var MAKS_TEKS = parseInt(B.maksTeks, 10) || 500;
+
+	// Mapping gambar PNG: GAMBAR[mode][gerakan]. Bila PNG belum ada, dipakai maskot lafaek bawaan (SVG).
+	var GAMBAR = {
+		preman:       { diam: "preman_diam.png", ngomong: "preman_ngomong.png", jempol: "preman_jempol.png", mikir: "preman_mikir.png" },
+		pintar:       { diam: "pintar_diam.png", ngomong: "pintar_ngomong.png", jempol: "pintar_jempol.png", mikir: "pintar_mikir.png" },
+		professional: { diam: "pro_diam.png",    ngomong: "pro_ngomong.png",    jempol: "pro_jempol.png",    mikir: "pro_mikir.png" }
+	};
+	var GAYA = { preman: "preman", pintar: "sopan", professional: "profesional" };     // pasangan karakter AI & aksesori maskot
+	var NAMA_MODE = { preman: "PREMAN", pintar: "PINTAR", professional: "PROFESSIONAL" };
+	var KEADAAN = { diam: "diam", ngomong: "bicara", jempol: "diam", mikir: "pikir", dengar: "dengar" };
+	var EMOJI_POSE = { jempol: "👍", mikir: "🤔", dengar: "👂" };
+
+	var SAPAAN = {
+		preman: { tetun: "Yo! Mai ko'alia santai de'it!", portugues: "Eh! Bora conversar à vontade!", inggris: "Yo! Let's just chill and talk!", indonesia: "Yo! Ayo ngobrol santai aja!" },
+		pintar: { tetun: "Bom dia! Mai ita aprende hamutuk, ho calma.", portugues: "Bom dia! Vamos aprender juntos, com calma.", inggris: "Good morning! Let's learn together, nice and slow.", indonesia: "Selamat pagi! Ayo kita belajar bersama, pelan-pelan." },
+		professional: { tetun: "Bom dia. Hau bele ajuda ita hanesan ne'e?", portugues: "Bom dia. Como posso ajudar?", inggris: "Good morning. How may I help you?", indonesia: "Selamat pagi. Ada yang bisa saya bantu?" }
+	};
+	var PAMIT = { tetun: "Obrigadu! Ita hasoru malu tan.", portugues: "Obrigado! Até à próxima.", inggris: "Thank you! See you next time.", indonesia: "Terima kasih! Sampai jumpa lagi." };
+	var SENTUH = { tetun: "Ita sei iha ne'e? Koko dehan buat ruma.", portugues: "Ainda aí? Diga alguma coisa.", inggris: "Still there? Say something.", indonesia: "Masih di sana? Coba katakan sesuatu." };
+	var BAHASA = { tetun: { nama: "Tetun", suara: "pt-PT" }, portugues: { nama: "Português", suara: "pt-PT" }, inggris: { nama: "English", suara: "en-US" }, indonesia: { nama: "Indonesia", suara: "id-ID" } };
+	var ALIAS_BAHASA = { tet: "tetun", pt: "portugues", portugis: "portugues", portuguese: "portugues", en: "inggris", english: "inggris", id: "indonesia", indonesian: "indonesia" };
+	var ALIAS_MODE = { pro: "professional", profesional: "professional", formal: "professional" };
+
+	var T = {
+		mikir: "LAFEX lagi mikir...", galat: "Ups, koneksi bermasalah. Koko fali! / Coba lagi ya.",
+		laju: "Pelan-pelan ya, tunggu sebentar... / Hein uitoan.", batas: "Jatah bicara hari ini habis. Besok lanjut lagi! / Tempo ohin hotu ona.",
+		dengar: "🎤 Hau rona ita... Bicara saja / Koalia de'it", jawab: "🔊 LAFEX koalia...", siap: "Pronto!",
+		tanpaMik: "Browser ini belum bisa dengar suara otomatis. Ketik saja, atau pakai Chrome. / Hakerek de'it.",
+		izinMik: "Mikrofon belum diizinkan. Izinkan mikrofon di browser, lalu tekan 🎤. / Husu lisensa mikrofone.",
+		micMati: "Mikrofon dimatikan. Tekan 🎤 untuk bicara lagi. / Mikrofone taka.", sisa30: "⏰ Sisa 30 detik / Sobra 30 segundu",
+		tidakDengar: "Tidak terdengar jelas. Coba lagi. / La rona didi'ak."
+	};
+
+	// ---------------------------------------------------------------- UTILITAS
+	function getURLParam(nama, bawaan) {
+		try { var v = new URLSearchParams(window.location.search).get(nama); return v ? v.trim() : bawaan; } catch (e) { return bawaan; }
+	}
+	function $(id) { return document.getElementById(id); }
+	function rapikan(s) { return s.replace(/[-_]+/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); }); }
+	function getCookie(n) { var m = document.cookie.match(new RegExp("(?:^|; )" + n + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : ""; }
+	function tunda(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+	function mmss(d) { d = Math.max(0, Math.ceil(d)); return ("0" + Math.floor(d / 60)).slice(-2) + ":" + ("0" + (d % 60)).slice(-2); }
+
+	// ---------------------------------------------------------------- KEADAAN
+	var LANGSUNG = B.langsung === "1";               // layar utama pelajar: tanpa tombol kembali, pilihan diingat
+	var KUNCI_PILIH = "lafex_vc_pilihan";
+	var simpan = {};
+	try { simpan = JSON.parse(localStorage.getItem(KUNCI_PILIH) || "{}") || {}; } catch (e) { simpan = {}; }
+	function param(nama, ingat, bawaan) {            // urutan: alamat (URL) > pilihan tersimpan > bawaan
+		var u = getURLParam(nama, ""); if (u) return u;
+		return (ingat !== undefined && ingat !== null && ingat !== "") ? String(ingat) : bawaan;
+	}
+	var mode = param("mode", simpan.mode, "preman").toLowerCase(); mode = ALIAS_MODE[mode] || mode; if (!GAMBAR[mode]) mode = "preman";
+	var bahasa = param("bahasa", simpan.bahasa, "tetun").toLowerCase(); bahasa = ALIAS_BAHASA[bahasa] || bahasa; if (!BAHASA[bahasa]) bahasa = "tetun";
+	var topik = param("topik", simpan.topik, "bebas").slice(0, 40).replace(/[^\w\- ]/g, "") || "bebas";
+	var maksMenit = parseInt(B.menitMaks, 10) || 15;
+	var menit = parseInt(param("menit", simpan.menit, B.menit), 10); if (!(menit >= 1)) menit = 5; menit = Math.min(menit, maksMenit);
+	function simpanPilihan() { try { localStorage.setItem(KUNCI_PILIH, JSON.stringify({ mode: mode, bahasa: bahasa, topik: topik, menit: menit })); } catch (e) { /* abaikan */ } }
+
+	var poin = 0;
+	try { poin = parseInt(localStorage.getItem("lafex_vc_poin"), 10) || 0; } catch (e) { /* abaikan */ }
+
+	var ada = {};                                   // ada[mode] = PNG tersedia?
+	var pose = "diam", terakhir = "", sibuk = false, mulutTimer = null, mulutBuka = false, jempolTimer = null;
+	var fase = "awal";                              // awal | jalan | akhir
+	var selesaiAt = 0, hitungTimer = null, jumlahGiliran = 0, peringatanTampil = false;
+	var micAktif = true, rec = null, mendengar = false, ulangDengar = 0, ulangAwal = 0, tanpaSuara = 0, sentuhTimer = null, tutupPesan = null;
+	var wake = null, diFetch = false;
+
+	var img = $("lafex-img"), maskot = $("maskot");
+
+	// ---------------------------------------------------------------- GAMBAR & GERAKAN
+	function setPose(p) {
+		pose = p;
+		if (ada[mode]) {
+			maskot.style.display = "none"; img.hidden = false;
+			var src = IMG_BASE + GAMBAR[mode][p === "dengar" ? "diam" : p];
+			if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+		} else {
+			img.hidden = true; maskot.style.display = "flex";
+			maskot.setAttribute("data-keadaan", KEADAAN[p] || "diam");
+			maskot.setAttribute("data-gaya", GAYA[mode]);
+			$("fb-lafaek").src = SVG_BASE + (p === "ngomong" ? "lafaek-buka.svg" : "lafaek.svg");
+			$("fb-aks").src = SVG_BASE + "aksesori-" + GAYA[mode] + ".svg";
+			$("fb-emoji").textContent = EMOJI_POSE[p] || "";
+		}
+	}
+	function cekGambar(m) {                         // PNG ada? (satu kali per mode)
+		return new Promise(function (ok) {
+			var i = new Image(); i.onload = function () { ada[m] = true; ok(); }; i.onerror = function () { ada[m] = false; ok(); };
+			i.src = IMG_BASE + GAMBAR[m].diam;
+		});
+	}
+	function prapemuatan(m) { if (!ada[m]) return; Object.keys(GAMBAR[m]).forEach(function (p) { new Image().src = IMG_BASE + GAMBAR[m][p]; }); }
+	function mulaiMulut() { if (mulutTimer) return; mulutTimer = setInterval(function () { mulutBuka = !mulutBuka; setPose(mulutBuka ? "ngomong" : "diam"); }, 180); }
+	function hentiMulut() { if (mulutTimer) { clearInterval(mulutTimer); mulutTimer = null; } mulutBuka = false; }
+	function batalJempol() { if (jempolTimer) { clearTimeout(jempolTimer); jempolTimer = null; } }
+
+	// ---------------------------------------------------------------- TAMPILAN
+	function tampilPoin() { $("poin").textContent = "⭐ Poin: " + poin; }
+	function tambahPoin(n) { poin += n; tampilPoin(); try { localStorage.setItem("lafex_vc_poin", String(poin)); } catch (e) { /* abaikan */ } }
+	function tampilInfo() {
+		$("nama-mode").textContent = NAMA_MODE[mode];
+		$("topik").textContent = BAHASA[bahasa].nama + " • " + rapikan(topik);
+		Array.prototype.forEach.call(document.querySelectorAll(".vc-mode button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-mode") === mode ? "true" : "false"); });
+		Array.prototype.forEach.call(document.querySelectorAll("#pil-bahasa button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-bahasa") === bahasa ? "true" : "false"); });
+		Array.prototype.forEach.call(document.querySelectorAll("#pil-topik button"), function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-topik") === topik ? "true" : "false"); });
+	}
+	function status(t) { $("status").textContent = t || ""; }
+	function tulis(utama, terjemahan, koreksi) {
+		$("subtitle").textContent = utama || "";
+		$("terjemahan").textContent = terjemahan || "";
+		var k = $("koreksi"); k.textContent = koreksi ? "✏️ " + koreksi : ""; k.classList.toggle("ada", !!koreksi);
+		$("subtitle").parentNode.scrollTop = 0;
+	}
+	function tulisKamu(t) { var k = $("kamu"); k.textContent = t ? "Ita / Kamu: " + t : ""; k.classList.toggle("ada", !!t); }
+	function peringatan(t) { var p = $("peringatan"); p.textContent = t || ""; p.classList.toggle("ada", !!t); }
+
+	// ---------------------------------------------------------------- SUARA LAFEX (SpeechSynthesis)
+	var TTS = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+	function pilihSuara(kode) {
+		if (!TTS) return null;
+		var d = window.speechSynthesis.getVoices() || [], dasar = kode.slice(0, 2).toLowerCase();
+		for (var i = 0; i < d.length; i++) if (d[i].lang && d[i].lang.replace("_", "-").toLowerCase() === kode.toLowerCase()) return d[i];
+		for (var j = 0; j < d.length; j++) if (d[j].lang && d[j].lang.toLowerCase().indexOf(dasar) === 0) return d[j];
+		return null;
+	}
+	var audioXtts = null;                           // suara XTTS yang sedang diputar (bila server XTTS dipasang)
+	function berhentiBicara() {
+		if (TTS) window.speechSynthesis.cancel();
+		if (audioXtts) { try { audioXtts.onended = audioXtts.onerror = audioXtts.onplay = null; audioXtts.pause(); } catch (e) { /* abaikan */ } audioXtts = null; }
+		hentiMulut();
+	}
+
+	// Ucapkan teks sambil menggerakkan mulut. Return Promise yang selesai tepat sekali.
+	function ucapkan(teks, kodeBahasa) {
+		berhentiBicara(); batalJempol();
+		return new Promise(function (selesai) {
+			var usai = false, pengaman = null;
+			function akhir() { if (usai) return; usai = true; clearTimeout(pengaman); hentiMulut(); setPose("diam"); selesai(); }
+			var perkiraan = Math.max(2500, teks.length * 95);
+			var xtts = B.xtts === "1" && (kodeBahasa || bahasa) === "tetun";   // XTTS hanya untuk jawaban Tetun
+			pengaman = setTimeout(function () { berhentiBicara(); akhir(); }, perkiraan + (xtts ? 20000 : 5000));   // beberapa browser tidak memanggil onend
+
+			function bicaraBrowser() {
+				if (usai) return;
+				if (!TTS) { mulaiMulut(); clearTimeout(pengaman); pengaman = setTimeout(akhir, perkiraan); return; }
+				var u = new SpeechSynthesisUtterance(teks), kode = BAHASA[kodeBahasa || bahasa].suara;
+				u.lang = kode; var v = pilihSuara(kode); if (v) u.voice = v;
+				u.rate = mode === "preman" ? 1.05 : (mode === "professional" ? 0.95 : 0.85);
+				u.onstart = mulaiMulut; u.onend = akhir; u.onerror = akhir;
+				window.speechSynthesis.speak(u);
+			}
+			if (!xtts) { bicaraBrowser(); return; }
+			fetch(B.tts, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ teks: teks.slice(0, 300) }) })
+				.then(function (r) { if (!r.ok) throw new Error("tts"); return r.blob(); })
+				.then(function (blob) {
+					if (usai) return;
+					var a = new Audio(URL.createObjectURL(blob)); audioXtts = a;
+					a.onplay = mulaiMulut; a.onended = akhir; a.onerror = function () { audioXtts = null; bicaraBrowser(); };
+					return a.play();
+				})
+				.catch(function () { audioXtts = null; bicaraBrowser(); });       // XTTS mati/lambat: pakai suara browser, panggilan tidak terhenti
+		});
+	}
+
+	// ---------------------------------------------------------------- MIKROFON OTOMATIS (tangan bebas)
+	var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+	function batalSentuh() { clearTimeout(sentuhTimer); sentuhTimer = null; }
+	function hentiDengar() {
+		mendengar = false;
+		if (rec) { var r = rec; rec = null; r.onresult = r.onerror = r.onend = r.onstart = null; try { r.abort(); } catch (e) { /* abaikan */ } }
+		$("mik").classList.remove("nyala");
+	}
+
+	// Dengarkan terus: tiap selesai satu kalimat langsung dikirim, lalu LAFEX menjawab, lalu mikrofon menyala lagi.
+	function dengar() {
+		if (fase !== "jalan" || sibuk || !micAktif) return;
+		if (!SR) { status(T.tanpaMik); return; }
+		hentiDengar();
+		var r = new SR(), dapat = false;
+		rec = r; r.lang = BAHASA[bahasa].suara; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+		r.onstart = function () {
+			mendengar = true; $("mik").classList.add("nyala"); status(T.dengar); setPose("dengar");
+			if (!sentuhTimer) sentuhTimer = setTimeout(sapaDiam, 15000);   // 15 detik tanpa suara (lintas restart mikrofon): LAFEX memancing bicara
+		};
+		r.onresult = function (e) {
+			var teks = "", final = false;
+			for (var i = e.resultIndex; i < e.results.length; i++) { teks += e.results[i][0].transcript; if (e.results[i].isFinal) final = true; }
+			teks = teks.trim(); if (!teks) return;
+			batalSentuh(); tanpaSuara = 0; setPose("mikir"); tulisKamu(teks);   // sedang bicara: LAFEX mikir/menyimak
+			if (final) { dapat = true; ulangDengar = 0; hentiDengar(); kirim(teks); }
+		};
+		r.onerror = function (e) {
+			if (e.error === "not-allowed" || e.error === "service-not-allowed") { micAktif = false; setMik(); status(T.izinMik); }
+			else if (e.error === "audio-capture") { micAktif = false; setMik(); status(T.izinMik); }
+			else if (e.error === "network") { status(T.galat); ulangDengar++; }
+		};
+		r.onend = function () {
+			if (rec !== r) return;                                // sudah diganti/dihentikan dengan sengaja
+			rec = null; mendengar = false; $("mik").classList.remove("nyala");
+			if (dapat || fase !== "jalan" || sibuk || !micAktif) return;
+			var sekarang = Date.now(); if (sekarang - ulangAwal > 10000) { ulangAwal = sekarang; ulangDengar = 0; }
+			ulangDengar++;
+			if (ulangDengar > 8) { micAktif = false; setMik(); status(T.tanpaMik); return; }    // mikrofon terus gagal: berhenti, user bisa tekan 🎤
+			setTimeout(dengar, ulangDengar > 4 ? 1200 : 250);
+		};
+		try { r.start(); } catch (e) { rec = null; setTimeout(dengar, 600); }
+	}
+
+	function sapaDiam() {                                         // pancingan bila user diam, maksimal 2 kali berturutan
+		sentuhTimer = null;
+		if (fase !== "jalan" || sibuk || !mendengar || tanpaSuara >= 2) return;
+		tanpaSuara++; hentiDengar();
+		ucapkan(SENTUH[bahasa], bahasa).then(function () { dengar(); });
+		tulis(SENTUH[bahasa], "", "");
+	}
+	function setMik() {
+		var m = $("mik"); m.classList.toggle("mati", !micAktif); m.setAttribute("aria-pressed", micAktif ? "true" : "false");
+		m.textContent = micAktif ? "🎤" : "🔇"; if (!micAktif) hentiDengar();
+	}
+
+	// ---------------------------------------------------------------- KIRIM KE BACKEND
+	function kirim(teks) {
+		teks = (teks || "").trim().slice(0, MAKS_TEKS);
+		if (!teks || sibuk || fase !== "jalan") return;
+		sibuk = true; diFetch = true; $("kirim").disabled = true; batalSentuh();
+		hentiDengar(); berhentiBicara(); batalJempol();
+		tulisKamu(teks); setPose("mikir"); status(T.mikir); tulis(T.mikir, "", ""); $("input").value = "";
+
+		var ctl = ("AbortController" in window) ? new AbortController() : null, batas = setTimeout(function () { if (ctl) ctl.abort(); }, 40000);
+		var hasil = null;
+		fetch(URL_CHAT, {
+			method: "POST", credentials: "same-origin", signal: ctl ? ctl.signal : undefined,
+			headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") },
+			body: JSON.stringify({ pesan: teks, mode: mode, bahasa: bahasa, topik: topik })
+		}).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { d.status = r.status; return d; }); })
+		.then(function (d) { hasil = d; })
+		.catch(function () { hasil = { ok: false, kode: "galat" }; })
+		.then(function () { clearTimeout(batas); return tanggapi(hasil); })
+		.then(function () { sibuk = false; diFetch = false; $("kirim").disabled = false; if (fase === "jalan") { status(""); dengar(); } });
+	}
+
+	function tanggapi(d) {
+		if (fase !== "jalan") return Promise.resolve();
+		if (d && d.ok && d.jawaban) {
+			jumlahGiliran++; tanpaSuara = 0;
+			var benar = d.benar === true; terakhir = d.jawaban;
+			tulis(d.jawaban, d.terjemahan, d.koreksi);
+			if (benar) tambahPoin(10);
+			status(T.jawab);
+			return ucapkan(d.jawaban, "tetun").then(function () {
+				if (benar && /jempol|tertawa|angguk/.test(d.gerak || "")) {      // pujian: jempol 2 detik, lalu diam
+					setPose("jempol"); jempolTimer = setTimeout(function () { jempolTimer = null; if (!mendengar) setPose("diam"); }, 2000);
+					return tunda(2000);
+				}
+			});
+		}
+		setPose("diam");
+		var kode = d && d.kode;
+		if (kode === "batas") { tulis(T.batas, "", ""); return tunda(1500).then(function () { akhiri("batas"); }); }
+		if (kode === "laju") { tulis(T.laju, "", ""); return tunda(6000); }
+		tulis(T.galat, "", ""); return tunda(1800);                         // galat: giliran tidak dihitung, coba lagi
+	}
+
+	// ---------------------------------------------------------------- GANTI MODE (tanpa reload, juga saat panggilan)
+	function setMode(m, bicara) {
+		if (!GAMBAR[m]) return;
+		mode = m; batalJempol(); batalSentuh(); berhentiBicara(); hentiDengar();
+		Promise.resolve(ada[m] === undefined ? cekGambar(m) : 0).then(function () { prapemuatan(m); tampilInfo(); setPose("diam"); });
+		tampilInfo(); setPose("diam");
+		var sapa = SAPAAN[mode][bahasa]; terakhir = sapa; tulisKamu(""); tulis(sapa, "", "");
+		simpanPilihan();
+		try { var u = new URL(window.location.href); u.searchParams.set("mode", mode); window.history.replaceState(null, "", u.toString()); } catch (e) { /* abaikan */ }
+		if (bicara) { sibuk = true; ucapkan(sapa, bahasa).then(function () { sibuk = false; dengar(); }); }
+	}
+
+	// ---------------------------------------------------------------- ALUR PANGGILAN
+	function hitung() {
+		var sisa = (selesaiAt - Date.now()) / 1000;
+		$("waktu").textContent = mmss(sisa); $("waktu").classList.toggle("sedikit", sisa <= 30);
+		if (sisa <= 30 && !peringatanTampil) { peringatanTampil = true; peringatan(T.sisa30); setTimeout(function () { peringatan(""); }, 4000); }
+		if (sisa <= 0) akhiri("waktu");
+	}
+
+	function tahanLayar() {                                       // layar tidak mati selama panggilan (bila didukung)
+		try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { wake = w; }, function () { /* abaikan */ }); } catch (e) { /* abaikan */ }
+	}
+	function lepasLayar() { try { if (wake) wake.release(); } catch (e) { /* abaikan */ } wake = null; }
+
+	function mulai() {
+		if (fase === "jalan") return;
+		simpanPilihan();
+		fase = "jalan"; jumlahGiliran = 0; peringatanTampil = false; tanpaSuara = 0; ulangDengar = 0; micAktif = true; setMik();
+		$("lapis-awal").classList.remove("ada"); $("lapis-akhir").classList.remove("ada");
+		selesaiAt = Date.now() + menit * 60000; hitung(); hitungTimer = setInterval(hitung, 500);
+		tahanLayar();
+		try { if (TTS) window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); } catch (e) { /* buka kunci suara di iPhone */ }
+		setMode(mode, true);                                       // LAFEX menyapa, lalu mikrofon menyala otomatis
+	}
+
+	function akhiri(alasan) {
+		if (fase !== "jalan") return;
+		fase = "akhir"; clearInterval(hitungTimer); batalSentuh(); hentiDengar(); lepasLayar(); status("");
+		var pamit = PAMIT[bahasa];
+		tulis(pamit, "", ""); berhentiBicara();
+		ucapkan(pamit, bahasa).then(function () {
+			$("akhir-judul").textContent = alasan === "batas" ? "Jatah hari ini habis" : (alasan === "tutup" ? "Obrigadu!" : "Obrigadu! Waktu habis");
+			$("akhir-isi").textContent = "⭐ Poin: " + poin + "  ·  💬 " + jumlahGiliran + " giliran  ·  ⏱ " + menit + " min";
+			$("lapis-akhir").classList.add("ada");
+		});
+	}
+
+	function kembali() {
+		fase = "akhir"; clearInterval(hitungTimer); batalSentuh(); berhentiBicara(); hentiDengar(); lepasLayar();
+		var sama = false;
+		try { sama = document.referrer && new URL(document.referrer).origin === window.location.origin; } catch (e) { /* abaikan */ }
+		if (sama && window.history.length > 1) window.history.back(); else window.location.href = URL_SISWA;
+	}
+
+	// ---------------------------------------------------------------- EVENT
+	Array.prototype.forEach.call(document.querySelectorAll(".vc-mode button"), function (b) {
+		b.addEventListener("click", function () {
+			if (fase === "jalan") { if (!diFetch) setMode(b.getAttribute("data-mode"), true); }
+			else { mode = b.getAttribute("data-mode"); setMode(mode, false); }
+		});
+	});
+	Array.prototype.forEach.call(document.querySelectorAll(".vc-menit button"), function (b) {
+		b.setAttribute("aria-pressed", parseInt(b.getAttribute("data-menit"), 10) === menit ? "true" : "false");
+		b.addEventListener("click", function () {
+			menit = parseInt(b.getAttribute("data-menit"), 10);
+			Array.prototype.forEach.call(document.querySelectorAll(".vc-menit button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+			simpanPilihan();
+		});
+	});
+	$("mulai").addEventListener("click", mulai);
+	$("ulang").addEventListener("click", function () { fase = "awal"; mulai(); });
+	if ($("pulang")) $("pulang").addEventListener("click", kembali);
+	Array.prototype.forEach.call(document.querySelectorAll("#pil-bahasa button"), function (b) {
+		b.addEventListener("click", function () {
+			bahasa = b.getAttribute("data-bahasa"); simpanPilihan(); tampilInfo();
+			if (fase !== "jalan") { terakhir = SAPAAN[mode][bahasa]; tulis(terakhir, "", ""); }
+		});
+	});
+	Array.prototype.forEach.call(document.querySelectorAll("#pil-topik button"), function (b) {
+		b.addEventListener("click", function () { topik = b.getAttribute("data-topik"); simpanPilihan(); tampilInfo(); });
+	});
+	function bukaMenu(ya) { var m = $("lapis-menu"); if (m) m.classList.toggle("ada", ya); }
+	["menu-buka", "menu-buka2"].forEach(function (id) { if ($(id)) $(id).addEventListener("click", function () { bukaMenu(true); }); });
+	if ($("menu-tutup")) $("menu-tutup").addEventListener("click", function () { bukaMenu(false); });
+	// Tutup: di layar utama pelajar hanya mengakhiri panggilan (tetap di halaman); di halaman lain kembali ke halaman sebelumnya
+	function tutup() {
+		if (!LANGSUNG) { kembali(); return; }
+		if (fase === "jalan") akhiri("tutup");
+		else if (fase === "akhir") { $("lapis-akhir").classList.remove("ada"); $("lapis-awal").classList.add("ada"); }
+	}
+	$("form").addEventListener("submit", function (e) { e.preventDefault(); if (fase === "jalan") kirim($("input").value); });   // ➤ dan Enter
+	$("mik").addEventListener("click", function () {
+		micAktif = !micAktif; ulangDengar = 0; setMik();
+		if (micAktif) { status(""); dengar(); } else status(T.micMati);
+	});
+	$("ulangi").addEventListener("click", function () {
+		if (!terakhir || fase !== "jalan") return;
+		hentiDengar(); sibuk = true;
+		ucapkan(terakhir, terakhir === SAPAAN[mode][bahasa] ? bahasa : "tetun").then(function () { sibuk = false; dengar(); });
+	});
+	$("tutup").addEventListener("click", tutup);
+	if ($("kembali")) $("kembali").addEventListener("click", kembali);
+	document.addEventListener("visibilitychange", function () {   // layar kembali aktif: nyalakan lagi layar & mikrofon
+		if (document.visibilityState === "visible" && fase === "jalan") { tahanLayar(); if (!sibuk) dengar(); }
+		else if (document.visibilityState === "hidden") hentiDengar();
+	});
+	window.addEventListener("pagehide", function () { berhentiBicara(); hentiDengar(); lepasLayar(); });
+	if (!SR) { $("status").textContent = T.tanpaMik; }
+
+	// ---------------------------------------------------------------- MULAI
+	tampilPoin(); tampilInfo(); $("waktu").textContent = mmss(menit * 60);
+	cekGambar(mode).then(function () { prapemuatan(mode); setPose("diam"); });
+	tulis(SAPAAN[mode][bahasa], "", "");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<a href="{% url 'belajar-list' %}" class="small font-weight-bold"><i class="fa fa-chevron-left"></i> {% t "back" %}</a>
+<div class="kartu kartu-{{ level.warna }} kartu-level mt-2">
+	<span class="gambar" aria-hidden="true">{{ level.emoji }}</span>
+	<span class="flex-fill">
+		<span class="nivel d-block">{% t "level" %} {{ level.nomor }}</span>
+		<span class="nama d-block">{% ml level "judul" %}</span>
+		<span class="progres mt-2" role="img"><span id="bar" style="width:{{ persen }}%"></span></span>
+		<span class="lencana" id="progres-teks" data-done="{{ selesai }}" data-total="{{ total }}">{% tpl "progress_text" done=selesai total=total %}</span>
+	</span>
+</div>
+
+{% if not materi_list %}
+	<p class="text-center text-muted my-4">{% t "level_empty" %}</p>
+{% endif %}
+{% if ada_draft %}<p class="small text-muted"><i class="fa fa-info-circle"></i> {% t "draft_note" %}</p>{% endif %}
+
+{% for m in materi_list %}
+	<h2 class="judul-halaman">{{ m.emoji }} {% ml m "judul" %}</h2>
+	{% for k in m.kalimat_aktif %}
+	<article class="kalimat-kartu" data-id="{{ k.id }}" data-progres="{% url 'belajar-progres' k.id %}">
+		<div class="d-flex align-items-start">
+			{% if k.emoji %}<span class="emoji" aria-hidden="true">{{ k.emoji }}</span>{% endif %}
+			<div class="flex-fill min-w-0">
+				<div class="baris">
+					<span class="kode">TET</span><b class="tet">{{ k.teks_tet }}</b>
+				</div>
+				{% if k.teks_en %}<div class="baris"><span class="kode">EN</span><span>{{ k.teks_en }}</span>
+					<button type="button" class="mini" data-tts="en-US" data-teks="{{ k.teks_en }}" {% if k.audio_en %}data-audio="{{ k.audio_en.url }}"{% endif %} aria-label="EN"><i class="fa fa-volume-up"></i></button></div>{% endif %}
+				{% if k.teks_pt %}<div class="baris"><span class="kode">PT</span><span>{{ k.teks_pt }}</span>
+					<button type="button" class="mini" data-tts="pt-PT" data-teks="{{ k.teks_pt }}" {% if k.audio_pt %}data-audio="{{ k.audio_pt.url }}"{% endif %} aria-label="PT"><i class="fa fa-volume-up"></i></button></div>{% endif %}
+				{% if k.teks_id %}<div class="baris"><span class="kode">ID</span><span>{{ k.teks_id }}</span>
+					<button type="button" class="mini" data-tts="id-ID" data-teks="{{ k.teks_id }}" {% if k.audio_id %}data-audio="{{ k.audio_id.url }}"{% endif %} aria-label="ID"><i class="fa fa-volume-up"></i></button></div>{% endif %}
+			</div>
+		</div>
+
+		<div class="aksi">
+			<button type="button" class="btn-lian kuning btn-dengar" {% if k.audio_tet %}data-audio="{{ k.audio_tet.url }}"{% else %}disabled title="Audio Tetun"{% endif %}>
+				<i class="fa fa-volume-up"></i> {% t "listen" %}</button>
+			<button type="button" class="btn-lian hitam btn-rekam"><i class="fa fa-microphone"></i> <span class="lbl-rekam">{% t "record_me" %}</span><span class="lbl-stop" hidden>{% t "stop" %} <span class="waktu"></span></span></button>
+			<button type="button" class="btn-lian merah btn-belajar{% if k.sudah %} sudah{% endif %}" aria-pressed="{% if k.sudah %}true{% else %}false{% endif %}">
+				<i class="fa fa-check"></i> <span class="lbl-belum">{% t "learned_btn" %}</span><span class="lbl-sudah">{% t "learned_done" %}</span></button>
+		</div>
+		{% if not k.audio_tet %}<div class="small text-muted mt-1">{% t "no_audio" %}</div>{% endif %}
+		<div class="hasil-rekam" hidden>
+			<audio controls class="w-100"></audio>
+			<div class="small text-muted">{% t "practice_note" %}</div>
+		</div>
+		<div class="galat text-danger small font-weight-bold" hidden>{% t "mic_error" %}</div>
+	</article>
+	{% endfor %}
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'main/js/rekam.js' %}"></script>
+<script src="{% static 'belajar/belajar.js' %}"></script>
+{% endblock %}

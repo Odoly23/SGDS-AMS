@@ -1,0 +1,63 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+
+{# ===== 4 menu besar: kata yang orang Timor paham, tanpa istilah teknis ===== #}
+<section class="row" aria-label="Menu">
+	<div class="col-6 mb-4">
+		<a href="{% url 'ai-chat' %}" class="kartu kartu-merah menu-kartu h-100">
+			<img src="{% static 'main/images/lafaek.svg' %}" alt="">
+			<span class="judul">{% t "menu_talk" %}</span>
+			<span class="sub">{% t "sub_talk" %}</span>
+		</a>
+	</div>
+	<div class="col-6 mb-4">
+		<a href="{% url 'belajar-list' %}" class="kartu kartu-kuning menu-kartu h-100">
+			<i class="fa fa-book" aria-hidden="true"></i>
+			<span class="judul">{% t "menu_learn" %}</span>
+			<span class="sub">{% t "sub_learn" %}</span>
+		</a>
+	</div>
+	{# "Ajuda AI" (merekam): hanya kontributor. Admin meninjau rekaman. Siswa tidak perlu keduanya. #}
+	{% if group == 'kontributor' %}
+	<div class="col-6 mb-4">
+		<a href="{% url 'crowdsource-home' %}" class="kartu kartu-hitam menu-kartu h-100">
+			<i class="fa fa-microphone" aria-hidden="true" style="color:var(--kuning)"></i>
+			<span class="judul">{% t "menu_help" %}</span>
+			<span class="sub">{% t "sub_help" %}</span>
+		</a>
+	</div>
+	{% elif group == 'admin' %}
+	<div class="col-6 mb-4">
+		<a href="{% url 'crowdsource-tinjau' %}" class="kartu kartu-hitam menu-kartu h-100">
+			<i class="fa fa-headphones" aria-hidden="true" style="color:var(--kuning)"></i>
+			<span class="judul">{% t "nav_review" %}</span>
+		</a>
+	</div>
+	{% endif %}
+	<div class="{% if group == 'admin' or group == 'kontributor' %}col-6{% else %}col-12{% endif %} mb-4">
+		<a href="{% url 'user-account' %}" class="kartu kartu-putih menu-kartu h-100">
+			<i class="fa fa-user" aria-hidden="true" style="color:var(--navy)"></i>
+			<span class="judul">{% t "menu_account" %}</span>
+			<span class="sub">{% t "sub_account" %}</span>
+		</a>
+	</div>
+</section>
+
+{# ===== Hari ini belajar apa? ===== #}
+<section aria-labelledby="judul-hari-ini">
+	<h2 id="judul-hari-ini" class="judul-halaman">{% t "today_title" %}</h2>
+	{% for l in levels %}
+		<a href="{% url "belajar-level" l.nomor %}" class="kartu kartu-{{ l.warna }} kartu-level">
+			<span class="gambar" aria-hidden="true">{{ l.emoji }}</span>
+			<span>
+				<span class="nivel d-block">{% t "level" %} {{ l.nomor }}</span>
+				<span class="nama d-block">{% ml l "judul" %}</span>
+				<span class="lencana">{% if l.total_kalimat %}{% t "kalimat_n" n=l.total_kalimat %}{% else %}{% t "coming_soon_badge" %}{% endif %}</span>
+			</span>
+		</a>
+	{% endfor %}
+</section>
+
+<button id="pasang" type="button" class="btn-lian kuning mt-3" hidden>{% t "install_hint" %}</button>
+{% endblock %}

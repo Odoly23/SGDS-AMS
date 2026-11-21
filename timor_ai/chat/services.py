@@ -7,6 +7,7 @@ Logika inti chat. View (views.py) tipis; semua kerja berat ada di sini.
 import re
 import time
 
+from billing import services as billing
 from datasets.models import Translation
 from rag.services import search as rag_search
 
@@ -44,18 +45,27 @@ def reply_chat(conv: Conversation, user_text: str) -> Message:
     messages += [{"role": m.role, "content": m.content} for m in history]
     messages.append({"role": "user", "content": user_text})
 
-    answer = llm.generate(messages)
+    result = llm.generate_full(messages)   # bisa melempar LLMUnavailable -> belum ada yang disimpan/ditagih
 
     Message.objects.create(conversation=conv, role=Message.Role.USER, content=user_text, detected_language=detected)
-    return Message.objects.create(
+    reply = Message.objects.create(
         conversation=conv,
         role=Message.Role.ASSISTANT,
-        content=answer,
+        content=result.text,
         detected_language=lang.code,
         sources=[{k: s[k] for k in ("title", "score", "category", "document_id")} for s in sources],
         model_name=llm.model_name(),
         latency_ms=int((time.monotonic() - started) * 1000),
     )
+    return _bill(conv, reply, result)
+
+
+def _bill(conv: Conversation, reply: Message, result: llm.LLMResult) -> Message:
+    """Potong poin sesuai token yang dipakai, lalu catat di pesan."""
+    cost, _ = billing.charge_usage(conv.user, result.input_tokens, result.output_tokens, note=f"percakapan #{conv.pk}")
+    reply.input_tokens, reply.output_tokens, reply.credits_charged = result.input_tokens, result.output_tokens, cost
+    reply.save(update_fields=["input_tokens", "output_tokens", "credits_charged"])
+    return reply
 
 
 # ------------------------------------------------------------- MODE TERJEMAHAN
@@ -111,15 +121,15 @@ def reply_translate(conv: Conversation, user_text: str) -> Message:
     if src is None and detected:
         src = Language.objects.filter(code=detected).first()
 
-    Message.objects.create(conversation=conv, role=Message.Role.USER, content=user_text, detected_language=detected)
-
     hit = _memory_lookup(user_text, src, tgt)
     if hit:
+        Message.objects.create(conversation=conv, role=Message.Role.USER, content=user_text, detected_language=detected)
         note = "" if hit.status == Translation.Status.VERIFIED else "\n\n(Catatan: terjemahan ini dari database tapi belum diverifikasi penutur asli.)"
         return Message.objects.create(
             conversation=conv, role=Message.Role.ASSISTANT, content=hit.text + note,
             detected_language=tgt.code, sources=[{"title": "Memori terjemahan", "id": hit.pk, "status": hit.status}],
             model_name="translation-memory", latency_ms=int((time.monotonic() - started) * 1000),
+            credits_charged=0,   # dari basis data, tanpa memanggil model -> gratis
         )
 
     system = prompts.SYSTEM_TRANSLATE.format(
@@ -127,11 +137,13 @@ def reply_translate(conv: Conversation, user_text: str) -> Message:
         tgt=tgt.name,
         examples=_few_shot_examples(user_text, src, tgt),
     )
-    answer = llm.generate([{"role": "system", "content": system}, {"role": "user", "content": user_text}], max_new_tokens=200)
+    result = llm.generate_full([{"role": "system", "content": system}, {"role": "user", "content": user_text}], max_new_tokens=200)
     warning = ""
     if tgt.is_local:
         warning = f"\n\n(Perhatian: terjemahan ke {tgt.name} masih eksperimental. Mohon dicek penutur asli.)"
-    return Message.objects.create(
-        conversation=conv, role=Message.Role.ASSISTANT, content=answer + warning, detected_language=tgt.code,
+    Message.objects.create(conversation=conv, role=Message.Role.USER, content=user_text, detected_language=detected)
+    reply = Message.objects.create(
+        conversation=conv, role=Message.Role.ASSISTANT, content=result.text + warning, detected_language=tgt.code,
         model_name=llm.model_name(), latency_ms=int((time.monotonic() - started) * 1000),
     )
+    return _bill(conv, reply, result)

@@ -1,0 +1,37 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<h1 class="judul-halaman mt-0">{% t "req_title" %}</h1>
+<div class="mb-3">
+	<a class="btn btn-sm {% if status == 'menunggu' %}btn-warning{% else %}btn-outline-dark{% endif %}" href="?status=menunggu">{% t "mine_wait" %} ({{ jumlah.menunggu }})</a>
+	<a class="btn btn-sm {% if status == 'disetujui' %}btn-success{% else %}btn-outline-dark{% endif %}" href="?status=disetujui">{% t "mine_ok" %} ({{ jumlah.disetujui }})</a>
+	<a class="btn btn-sm {% if status == 'ditolak' %}btn-danger{% else %}btn-outline-dark{% endif %}" href="?status=ditolak">{% t "mine_no" %} ({{ jumlah.ditolak }})</a>
+	<a class="btn btn-sm {% if status == 'semua' %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?status=semua">{% t "rev_all" %}</a>
+	<a class="btn btn-sm btn-outline-secondary ml-2" href="{% url 'u-list' %}"><i class="fa fa-users"></i> {% t "users_title" %}</a>
+</div>
+{% for p in halaman %}
+<div class="main-content p-3 mb-3">
+	<div class="d-flex justify-content-between flex-wrap">
+		<strong>{{ p.user.username|truncatechars:30 }}</strong>
+		<span class="badge {% if p.status == 'disetujui' %}badge-success{% elif p.status == 'ditolak' %}badge-danger{% else %}badge-warning{% endif %}">{{ p.get_status_display }}</span>
+	</div>
+	<small class="d-block mb-2">{{ p.bahasa.nama }} · {{ p.datetime|date:"d/m/Y" }}{% if p.user.groups.all.0.name %} · {{ p.user.groups.all.0.name }}{% endif %}</small>
+	<p class="mb-2">{{ p.alasan }}</p>
+	{% if p.status == 'menunggu' %}
+	<div class="d-flex flex-wrap align-items-center" style="gap:8px">
+		<form method="post" action="{% url 'u-pengajuan-aksi' p.pk %}" class="m-0">{% csrf_token %}
+			<input type="hidden" name="aksi" value="setujui">
+			<button class="btn btn-success" type="submit"><i class="fa fa-check"></i> {% t "rev_approve" %}</button>
+		</form>
+		<form method="post" action="{% url 'u-pengajuan-aksi' p.pk %}" class="m-0 d-flex" style="gap:6px">{% csrf_token %}
+			<input type="hidden" name="aksi" value="tolak">
+			<input class="form-control" name="catatan" maxlength="200" placeholder="..." {% tattr 'rev_reason' %}>
+			<button class="btn btn-danger" type="submit"><i class="fa fa-times"></i> {% t "rev_reject" %}</button>
+		</form>
+	</div>
+	{% elif p.status == 'ditolak' and p.catatan %}<small class="text-danger">{{ p.catatan }}</small>{% endif %}
+</div>
+{% empty %}
+<p class="text-center">{% t "req_empty" %}</p>
+{% endfor %}
+{% endblock %}

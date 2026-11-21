@@ -11,6 +11,9 @@ import csv
 from django.contrib import admin, messages
 from django.http import HttpResponse
 
+from django.db.models import Count, Q
+
+from . import services
 from .models import Phrase, Translation
 
 
@@ -46,6 +49,8 @@ class PhraseAdmin(admin.ModelAdmin):
                     obj.contributor = request.user  # catat siapa yang menambah
                     # Non-reviewer: status otomatis DRAFT (field status read-only untuk mereka)
             obj.save()
+            if isinstance(obj, Translation) and obj.status == Translation.Status.VERIFIED:
+                services.set_status(obj, obj.status, request.user)   # bayar hadiah (sekali)
         formset.save_m2m()
         for obj in formset.deleted_objects:
             obj.delete()
@@ -56,8 +61,9 @@ def mark_verified(modeladmin, request, queryset):
     if not request.user.has_perm("datasets.verify_translation"):
         modeladmin.message_user(request, "Anda tidak punya izin memverifikasi.", messages.ERROR)
         return
-    n = queryset.update(status=Translation.Status.VERIFIED, reviewed_by=request.user)
-    modeladmin.message_user(request, f"{n} terjemahan ditandai terverifikasi.", messages.SUCCESS)
+    for t in queryset:
+        services.set_status(t, Translation.Status.VERIFIED, request.user)   # sekaligus membayar hadiah poin kontributor & pemeriksa
+    modeladmin.message_user(request, f"{queryset.count()} terjemahan ditandai terverifikasi (hadiah poin dibayarkan).", messages.SUCCESS)
 
 
 @admin.action(description="Kirim ke review")
@@ -71,7 +77,8 @@ def mark_rejected(modeladmin, request, queryset):
     if not request.user.has_perm("datasets.verify_translation"):
         modeladmin.message_user(request, "Anda tidak punya izin.", messages.ERROR)
         return
-    queryset.update(status=Translation.Status.REJECTED, reviewed_by=request.user)
+    for t in queryset:
+        services.set_status(t, Translation.Status.REJECTED, request.user)
 
 
 @admin.action(description="Export terpilih ke CSV")
@@ -88,13 +95,21 @@ def export_csv(modeladmin, request, queryset):
 
 @admin.register(Translation)
 class TranslationAdmin(admin.ModelAdmin):
-    list_display = ("phrase", "language", "short_text", "status", "dialect", "contributor", "updated_at")
+    list_display = ("phrase", "language", "short_text", "status", "suara", "dialect", "contributor", "updated_at")
     list_filter = ("status", "language", "phrase__category")
     search_fields = ("text", "phrase__code")
     list_select_related = ("phrase", "language", "contributor")
     autocomplete_fields = ("phrase",)
     actions = [mark_review, mark_verified, mark_rejected, export_csv]
     readonly_fields = ("contributor", "reviewed_by")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            yes=Count("votes", filter=Q(votes__agree=True)), no=Count("votes", filter=Q(votes__agree=False)))
+
+    @admin.display(description="Suara (setuju/tidak)", ordering="yes")
+    def suara(self, obj):
+        return f"{obj.yes}/{obj.no}"
 
     @admin.display(description="Teks")
     def short_text(self, obj):
@@ -112,3 +127,5 @@ class TranslationAdmin(admin.ModelAdmin):
         if "status" in form.changed_data and obj.status == Translation.Status.VERIFIED:
             obj.reviewed_by = request.user
         super().save_model(request, obj, form, change)
+        if obj.status == Translation.Status.VERIFIED:
+            services.set_status(obj, obj.status, request.user)   # hadiah dibayar sekali saja

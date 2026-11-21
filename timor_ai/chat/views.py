@@ -8,13 +8,17 @@ View chat.
   ChatView           -> POST /api/chat/
   DetectView         -> POST /api/detect/
 """
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import services
+from billing import services as billing
+
+from . import llm, services
 from .detect import detect_language
 from .models import Conversation, Language
 from .serializers import (
@@ -83,6 +87,18 @@ class ChatView(APIView):
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
 
+        # 1) batas kecepatan per user (melindungi biaya token Anda dari spam/bot)
+        rl_key = f"chat-rate:{request.user.pk}"
+        cache.add(rl_key, 0, 60)
+        if cache.incr(rl_key) > settings.BILLING["MAX_MESSAGES_PER_MINUTE"]:
+            return Response({"detail": "Terlalu cepat. Tunggu sebentar lalu coba lagi.", "code": "rate_limited"},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+        # 2) saldo poin cukup?
+        wallet = billing.get_wallet(request.user)
+        if wallet.balance < settings.BILLING["MIN_BALANCE_TO_CHAT"]:
+            return Response({"detail": "Poin Anda habis. Isi ulang dengan kode voucher.", "code": "insufficient_credits",
+                             "balance": wallet.balance}, status=status.HTTP_402_PAYMENT_REQUIRED)
+
         conv_id = data.get("conversation_id")
         if conv_id:
             conv = Conversation.objects.filter(user=request.user, pk=conv_id).first()
@@ -102,10 +118,20 @@ class ChatView(APIView):
                 source_language=data.get("source_language"),
             )
 
-        if conv.mode == Conversation.Mode.TRANSLATE:
-            reply = services.reply_translate(conv, data["message"])
-        else:
-            reply = services.reply_chat(conv, data["message"])
+        try:
+            if conv.mode == Conversation.Mode.TRANSLATE:
+                reply = services.reply_translate(conv, data["message"])
+            else:
+                reply = services.reply_chat(conv, data["message"])
+        except llm.LLMUnavailable as exc:   # model gagal -> user TIDAK ditagih
+            if not conv_id:
+                conv.delete()               # jangan tinggalkan percakapan kosong
+            return Response({"detail": str(exc), "code": "llm_unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         conv.save()  # memperbarui updated_at
 
-        return Response({"conversation_id": conv.pk, "reply": MessageSerializer(reply).data})
+        return Response({
+            "conversation_id": conv.pk,
+            "reply": MessageSerializer(reply).data,
+            "credits_charged": reply.credits_charged,
+            "balance": billing.get_wallet(request.user).balance,
+        })
