@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
@@ -7,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from config.decorators import allowed_users, unauthenticated_user
+from config.utils import lewat_batas_ip
 from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, GRUP_PELAJAR, SEMUA_GRUP, buat_user, nama_grup, pastikan_grup
 from users.forms import DaftarForm
 from custom.models import Bahasa
@@ -21,6 +23,9 @@ PERAN = [('anak', 'role_anak', 'fa-graduation-cap'), ('dewasa', 'role_dewasa', '
 @unauthenticated_user
 def Register(request):
 	if request.method == 'POST':
+		if lewat_batas_ip(request, 'daftar', settings.BATAS_IP['DAFTAR_JAM'], 60 * 60):
+			messages.error(request, 'err_register_limit')
+			return redirect('register')
 		form = DaftarForm(request.POST)
 		if form.is_valid():
 			user = buat_user(form.kontak_normal, form.cleaned_data['password1'])

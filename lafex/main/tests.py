@@ -291,3 +291,60 @@ class LayarVideoCall(TestCase):
 		self.assertIn('class="vc-demo">demo<', self.html)                               # backend demo: lencana kecil, bukan kalimat di tengah layar
 		with os_(AI={**settings.AI, 'BACKEND': 'local'}):
 			self.assertNotIn('class="vc-demo"', self.client.get('/video-call/').content.decode())
+
+
+class BatasPerIP(TestCase):
+	"""Batas per alamat IP: menahan akun massal, dan BENAR di belakang proxy (bukan satu hitungan untuk semua pengguna)."""
+
+	@classmethod
+	def setUpTestData(cls):
+		call_command('seed_awal', verbosity=0)
+
+	def setUp(self):
+		cache.clear()
+
+	def _tamu(self, **kw):
+		self.client.logout()
+		return self.client.post('/tamu/', **kw)
+
+	def test_alamat_klien_tanpa_proxy_mengabaikan_header_palsu(self):
+		from django.test import RequestFactory
+		from config.utils import alamat_klien
+		r = RequestFactory().get('/', REMOTE_ADDR='203.0.113.7', HTTP_X_FORWARDED_FOR='9.9.9.9')
+		self.assertEqual(alamat_klien(r), '203.0.113.7')                           # klien tidak bisa memalsukan IP lewat header
+
+	@override_settings(BEHIND_PROXY=True)
+	def test_alamat_klien_di_belakang_proxy_memakai_entri_terakhir(self):
+		from django.test import RequestFactory
+		from config.utils import alamat_klien
+		r = RequestFactory().get('/', REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR='6.6.6.6, 198.51.100.4')
+		self.assertEqual(alamat_klien(r), '198.51.100.4')                           # entri awal (palsu) diabaikan
+		self.assertEqual(alamat_klien(RequestFactory().get('/', REMOTE_ADDR='10.0.0.1')), '10.0.0.1')
+
+	@override_settings(BATAS_IP={'TAMU_JAM': 3, 'DAFTAR_JAM': 30, 'TTS_MENIT': 120})
+	def test_akun_tamu_dibatasi_per_ip(self):
+		for _ in range(3):
+			self.assertEqual(self._tamu(REMOTE_ADDR='203.0.113.9').status_code, 302)
+		self.assertEqual(User.objects.filter(username__startswith='tamu-').count(), 3)
+		self._tamu(REMOTE_ADDR='203.0.113.9')                                      # ke-4 dari IP yang sama
+		self.assertEqual(User.objects.filter(username__startswith='tamu-').count(), 3)
+		self._tamu(REMOTE_ADDR='203.0.113.10')                                     # IP lain tidak terpengaruh
+		self.assertEqual(User.objects.filter(username__startswith='tamu-').count(), 4)
+
+	@override_settings(BEHIND_PROXY=True, BATAS_IP={'TAMU_JAM': 2, 'DAFTAR_JAM': 30, 'TTS_MENIT': 120})
+	def test_di_belakang_proxy_tiap_klien_dihitung_sendiri(self):
+		for klien in ('198.51.100.1', '198.51.100.2', '198.51.100.3'):             # proxy sama (10.0.0.1), klien beda
+			self._tamu(REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR=klien)
+		self.assertEqual(User.objects.filter(username__startswith='tamu-').count(), 3)      # dulu: hitungan bersama, pengguna ke-3 ditolak
+		for _ in range(3):                                                         # satu klien yang sama melampaui batas, walau memalsukan entri awal
+			self._tamu(REMOTE_ADDR='10.0.0.1', HTTP_X_FORWARDED_FOR=f'{_}.{_}.{_}.{_}, 198.51.100.50')
+		self.assertEqual(User.objects.filter(username__startswith='tamu-').count(), 5)
+
+	@override_settings(BATAS_IP={'TAMU_JAM': 60, 'DAFTAR_JAM': 2, 'TTS_MENIT': 120})
+	def test_pendaftaran_dibatasi_per_ip(self):
+		def daftar(n):
+			self.client.logout()
+			return self.client.post('/users/register/', {'kontak': f'orang{n}@contoh.com', 'password1': 'rahasia123', 'password2': 'rahasia123'}, REMOTE_ADDR='203.0.113.20')
+		self.assertEqual([daftar(i).status_code for i in range(3)], [302, 302, 302])
+		self.assertEqual(User.objects.filter(username__startswith='orang').count(), 2)     # yang ke-3 ditolak
+		self.assertContains(self.client.get('/users/register/', follow=True), 'Too many sign-ups')

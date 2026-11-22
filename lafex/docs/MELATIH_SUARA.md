@@ -14,7 +14,7 @@
 | Admin: `/ai/suara/` | Status server Whisper/XTTS, jumlah menit data latihan siap pakai per bahasa, perintah ekspor. |
 | Kontributor: `/crowdsource/kontribusiku/` | Kontributor menulis sendiri apa yang ia ucapkan (opsional). Terkunci setelah admin memeriksa. |
 | Kontributor: halaman rekam | Tombol **Rona ezemplu**: XTTS bila dipasang, jika tidak suara browser. |
-| `/ai/tts/` dan Video Call | Jawaban Tetun diputar dengan XTTS bila `TTS_URL` diisi; jika server mati/lambat otomatis kembali ke suara browser. Kalimat yang sama di-cache, batas 20 permintaan/menit/user. |
+| `/ai/tts/` dan Video Call | Jawaban Tetun diputar dengan XTTS bila `TTS_URL` diisi; jika server mati/lambat otomatis kembali ke suara browser. Kalimat yang sama di-cache; batas 20 permintaan/menit per akun dan 120/menit per IP (`BATAS_IP_TTS_MENIT`; hanya sintesis baru yang dihitung, bukan yang dari cache). |
 | `python manage.py export_suara` | Menulis data latihan: `whisper/train.jsonl` + wav 16 kHz dan `xtts/metadata.csv` (`audio_file|text|speaker_name`) + wav 22,05 kHz. |
 
 **Aturan kualitas data:** hanya rekaman berstatus *disetujui* dengan transkripsi dari **kontributor atau admin** yang diekspor. **Draf Whisper tidak pernah diekspor** (kalau tidak, model belajar dari kesalahannya sendiri). Berkas ekspor tidak memuat kode pengirim/nama; nama berkas hanya nomor rekaman.

@@ -102,7 +102,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v14"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v15"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
 
 # ---------- Percakapan suara dengan AI (ai_chat) ----------
 # BACKEND: "dummy" = balasan contoh | "local" = model gratis/open-source (Gemma dll, server Ollama/llama.cpp/vLLM) | "anthropic" = model berbayar lewat API (Anda membayar per token).
@@ -148,6 +148,17 @@ SUARA = {
 # lalu menekan "Bicara dengan LAFEX" (satu klik) ke /video-call/?mode=..&bahasa=..&topik=.. .
 HOME_LANGSUNG_BICARA = os.getenv("HOME_LANGSUNG_BICARA", "0") == "1"
 
+# Di belakang nginx/proxy: alamat klien dibaca dari X-Forwarded-For (entri TERAKHIR, yang ditambahkan proxy kita; entri awal bisa dipalsukan klien).
+BEHIND_PROXY = os.getenv("DJANGO_BEHIND_PROXY", "0") == "1"
+
+# Batas per ALAMAT IP (selain batas per akun): menahan pembuatan akun massal untuk menguras jatah/GPU.
+# HATI-HATI: banyak pengguna ponsel berbagi satu IP (jaringan operator/CGNAT, sekolah, kantor), jadi angka dibuat longgar dan bisa diubah lewat .env.
+BATAS_IP = {
+	"TAMU_JAM": int(os.getenv("BATAS_IP_TAMU_JAM", "60")),        # akun tamu baru per IP per jam
+	"DAFTAR_JAM": int(os.getenv("BATAS_IP_DAFTAR_JAM", "30")),    # pendaftaran baru per IP per jam
+	"TTS_MENIT": int(os.getenv("BATAS_IP_TTS_MENIT", "120")),     # permintaan sintesis suara (XTTS, memakai GPU) per IP per menit
+}
+
 # ---------- Keamanan produksi (aktif bila DEBUG mati). Mikrofon browser WAJIB HTTPS, jadi HTTPS adalah bawaan produksi.
 # DJANGO_HTTPS=0 hanya untuk uji sementara tanpa HTTPS. Di belakang nginx/proxy yang mengakhiri TLS, set DJANGO_BEHIND_PROXY=1.
 if not DEBUG and not TESTING:
@@ -155,5 +166,5 @@ if not DEBUG and not TESTING:
 	SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = _https
 	SECURE_SSL_REDIRECT = _https
 	SECURE_HSTS_SECONDS = 31536000 if _https else 0
-	if os.getenv("DJANGO_BEHIND_PROXY", "0") == "1":
+	if BEHIND_PROXY:
 		SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

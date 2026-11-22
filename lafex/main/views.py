@@ -14,6 +14,7 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 
 from config.decorators import allowed_users, unauthenticated_user
+from config.utils import alamat_klien, lewat_batas_ip
 from config.user_utils import GRUP_PELAJAR, SEMUA_GRUP, nama_grup, normalisasi_kontak, pastikan_grup
 from custom.models import Level
 
@@ -38,7 +39,7 @@ def Home(request):
 @unauthenticated_user
 def Login(request):
 	if request.method == 'POST':
-		kunci = 'login-gagal:' + hashlib.sha1(f'{request.META.get("REMOTE_ADDR", "")}|{request.POST.get("kontak", "").strip().lower()}'.encode()).hexdigest()
+		kunci = 'login-gagal:' + hashlib.sha1(f'{alamat_klien(request)}|{request.POST.get("kontak", "").strip().lower()}'.encode()).hexdigest()
 		if cache.get(kunci, 0) >= BATAS_GAGAL:
 			messages.error(request, 'err_login_locked')
 		else:
@@ -68,9 +69,7 @@ def Logout(request):
 def Tamu(request):
 	"""'Lanjut tanpa daftar': akun tamu sementara (group pelajar). Progres tersimpan di HP ini selama cookie ada."""
 	# batas pembuatan akun tamu per alamat IP supaya tidak diisi bot
-	kunci = f'tamu-baru:{request.META.get("REMOTE_ADDR", "")}'
-	cache.add(kunci, 0, 60 * 60)
-	if cache.incr(kunci) > 30:
+	if lewat_batas_ip(request, 'tamu', settings.BATAS_IP['TAMU_JAM'], 60 * 60):
 		messages.error(request, 'err_guest_limit')
 		return redirect('login')
 	from users.models import Perfil

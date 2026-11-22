@@ -197,6 +197,7 @@ TEKS = {
                            pt="Email/telefone ou palavra-passe errados.", id="Email/nomor HP atau kata sandi salah."),
     "err_login_locked": dict(tet="Koko barak liu ona. Hein minutu 15 no koko fali.", en="Too many attempts. Try again in 15 minutes.",
                              pt="Demasiadas tentativas. Tenta de novo daqui a 15 minutos.", id="Terlalu banyak percobaan. Coba lagi dalam 15 menit."),
+    "err_register_limit": dict(tet="Regista barak liu husi fatin ida ne'e. Koko fali oras ida tuir mai.", en="Too many sign-ups from this place. Please try again in an hour.", pt="Demasiados registos deste local. Tente novamente dentro de uma hora.", id="Terlalu banyak pendaftaran dari tempat ini. Coba lagi sejam lagi."),
     "err_guest_limit": dict(tet="Konta konvidadu barak liu husi rede ne'e. Koko fali tuir mai.", en="Too many guest accounts from this network. Try again later.",
                             pt="Demasiadas contas de convidado nesta rede. Tenta mais tarde.", id="Terlalu banyak akun tamu dari jaringan ini. Coba lagi nanti."),
     "msg_account_created": dict(tet="Konta foun kria ona.", en="New account created.", pt="Nova conta criada.", id="Akun baru dibuat."),

@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ai import llm, suara
 from ai.models import Giliran
 from config.decorators import allowed_users
+from config.utils import lewat_batas_ip
 from config.user_utils import GRUP_ADMIN, SEMUA_GRUP, nama_grup
 from custom.models import KarakterAI
 from users.models import Perfil
@@ -189,7 +190,7 @@ def Tts(request):
 	if audio is None:
 		batas = f'tts-menit:{request.user.pk}'
 		cache.add(batas, 0, 60)
-		if cache.incr(batas) > cfg['TTS_BATAS_MENIT']:
+		if cache.incr(batas) > cfg['TTS_BATAS_MENIT'] or lewat_batas_ip(request, 'tts', settings.BATAS_IP['TTS_MENIT'], 60):   # per akun DAN per IP (akun tamu bisa dibuat banyak)
 			return JsonResponse({'ok': False, 'kode': 'laju'}, status=429)
 		try:
 			audio = suara.sintesis(teks)

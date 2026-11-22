@@ -606,3 +606,29 @@ class Suara(Unggah):
 def mock_stdout():
 	import io
 	return io.StringIO()
+
+
+class TtsPerIP(Suara):
+	"""/ai/tts/ juga dibatasi per IP: banyak akun tamu dari satu IP tidak bisa membanjiri GPU."""
+
+	def test_banyak_akun_satu_ip_terkena_batas_ip(self):
+		def tts(user, teks):
+			self.client.force_login(user)
+			return self.client.post('/ai/tts/', json.dumps({'teks': teks}), content_type='application/json', REMOTE_ADDR='203.0.113.50')
+		pengguna = [user_grup(f'tamu{i}', 'pelajar') for i in range(4)]
+		with override_settings(BATAS_IP={'TAMU_JAM': 60, 'DAFTAR_JAM': 30, 'TTS_MENIT': 3}):
+			cache.clear()
+			hasil = [tts(u, f'kalimat {i}').status_code for i, u in enumerate(pengguna)]          # akun berbeda, kalimat berbeda, IP sama
+		self.assertEqual(hasil, [200, 200, 200, 429])
+		with override_settings(BATAS_IP={'TAMU_JAM': 60, 'DAFTAR_JAM': 30, 'TTS_MENIT': 3}):
+			self.client.force_login(pengguna[0])
+			lain = self.client.post('/ai/tts/', json.dumps({'teks': 'kalimat baru'}), content_type='application/json', REMOTE_ADDR='203.0.113.51')
+			self.assertEqual(lain.status_code, 200)                                              # IP lain tidak terpengaruh
+
+	def test_kalimat_dari_cache_tidak_menghabiskan_batas_ip(self):
+		u = user_grup('tamu-c', 'pelajar')
+		with override_settings(BATAS_IP={'TAMU_JAM': 60, 'DAFTAR_JAM': 30, 'TTS_MENIT': 2}):
+			cache.clear()
+			self.client.force_login(u)
+			kode = [self.client.post('/ai/tts/', json.dumps({'teks': 'sama'}), content_type='application/json', REMOTE_ADDR='203.0.113.60').status_code for _ in range(6)]
+		self.assertEqual(kode, [200] * 6)                                                        # hanya sintesis baru yang dihitung, bukan cache
