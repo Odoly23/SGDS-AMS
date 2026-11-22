@@ -411,7 +411,7 @@ class GambarLafex(TestCase):
 
 	def test_mode_yang_gambarnya_sudah_ada_lengkap_transparan_dan_seukuran(self):
 		from django.contrib.staticfiles import finders
-		for mode in ('preman', 'pintar'):                      # 'pro' menyusul bila gambarnya sudah dikirim
+		for mode in ('preman', 'pintar', 'pro'):
 			ukuran = set()
 			for pose in ('diam', 'ngomong', 'jempol', 'mikir', 'lambai'):
 				jalur = finders.find(f'img/lafex/{mode}_{pose}.png')

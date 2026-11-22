@@ -24,13 +24,17 @@ Mengganti mode/bahasa/topik hanya bisa di halaman Siswa, bukan di layar ini (sup
 ## Gambar LAFEX (hanya 12 PNG milik Anda, tidak ada gambar lain)
 `/static/img/lafex/{preman,pintar,pro}_{diam,ngomong,jempol,mikir}.png`
 Diam = `diam` | Dengerin = `mikir` | Mikir = `mikir` | Ngomong = `ngomong`<->`diam` tiap 180 ms | Benar = `jempol` 2 detik lalu `diam`.
-**Status aset:** `preman_*` dan `pintar_*` (Matenek) sudah terpasang di `ai/static/img/lafex/` (diam, ngomong, jempol, mikir + `lambai` sebagai tambahan yang belum dipakai halaman). `pro_*` menunggu gambarnya.
-Menyiapkan gambar baru (latar putih jadi transparan, semua pose dipotong dengan kotak yang sama agar tidak melompat):
+**Status aset:** ketiga mode lengkap di `ai/static/img/lafex/`: `preman_*`, `pintar_*` (Matenek), `pro_*` (diam, ngomong, jempol, mikir + `lambai` sebagai tambahan yang belum dipakai halaman).
+Menyiapkan gambar baru dengan `tools/siapkan_gambar.py` (latar dibuang, semua pose dipotong dengan kotak yang sama agar tidak melompat). Tiga metode latar:
 ```bash
 pip install pillow numpy scipy
-python tools/siapkan_gambar.py --mode pro --out ai/static/img/lafex --diam a.jpg --ngomong b.jpg --jempol c.jpg --mikir d.jpg
-# latar BERGAMBAR berwarna pucat (seperti ruang kelas Matenek; maskot lebih jenuh dari latar): tambahkan  --latar warna
+# 1) latar PUTIH polos (Preman):
+python tools/siapkan_gambar.py --mode preman --out ai/static/img/lafex --diam a.jpg --ngomong b.jpg --jempol c.jpg --mikir d.jpg
+# 2) latar bergambar PUCAT, maskot lebih jenuh (Pintar/Matenek):  --latar warna
+# 3) latar RUMIT, mis. kantor + jas hitam (Professional): butuh  pip install rembg onnxruntime  dan model isnet-general-use.onnx di ~/.u2net/
+python tools/siapkan_gambar.py --mode pro --latar model --atas 0.15 --bawah 0.865 --pulih 150,800,520,1144 --out ai/static/img/lafex ...
 ```
+`--atas/--bawah` membuang judul dan tulisan di gambar; `--pulih x0,y0,x1,y1` memulihkan bagian hijau yang gagal dilihat model (mis. ekor yang menumpuk di lantai krem). **Selalu periksa hasilnya dengan mata** (tempelkan di atas warna latar layar): potongan otomatis bisa meninggalkan sisa atau memakan bagian.
 Bila sebuah file tidak ada, dipakai `diam.png` mode itu; bila `diam.png` juga tidak ada, gambar dikosongkan (tanpa emoji/gambar pengganti/internet).
 
 ## Suara & pengenalan
