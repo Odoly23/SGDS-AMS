@@ -29,3 +29,6 @@ NO_CONTEXT = "(Tidak ada dokumen yang relevan ditemukan.)"
 FALLBACK_NO_MODEL = (
     "[MODE DEMO – model AI belum aktif] Atur LLM_BACKEND=hf di file .env untuk memakai model sungguhan."
 )
+
+REFUSAL = "Maaf, saya tidak bisa membantu dengan permintaan ini."
+EMPTY_ANSWER = "Maaf, saya belum bisa menyusun jawaban. Coba ulangi pertanyaannya dengan kalimat lebih pendek."

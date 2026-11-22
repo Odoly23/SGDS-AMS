@@ -1,0 +1,44 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="main-content mx-auto p-3" style="max-width:560px">
+	<h1 class="judul-halaman mt-0">{% t "apply_title" %}</h1>
+	<p>{% t "apply_intro" %}</p>
+
+	{% if galat %}<div class="alert alert-danger">{% pesan galat %}</div>{% endif %}
+
+	{% if perfil.is_tamu %}
+		<div class="alert alert-warning">{% t "apply_guest" %}</div>
+	{% elif menunggu %}
+		<div class="alert alert-warning"><i class="fa fa-hourglass-half"></i> {% t "apply_wait" %}</div>
+	{% elif not boleh %}
+		<div class="alert alert-secondary">{% t "apply_max" %}</div>
+	{% else %}
+	<form method="post">{% csrf_token %}
+		<div class="form-group">
+			<label for="bahasa" class="font-weight-bold">{% t "apply_lang" %}</label>
+			<select name="bahasa" id="bahasa" class="form-control form-control-lg" required>
+				{% for b in bahasa_list %}<option value="{{ b.kode }}">{{ b.nama }}</option>{% endfor %}
+			</select>
+		</div>
+		<div class="form-group">
+			<label for="alasan" class="font-weight-bold">{% t "apply_reason" %}</label>
+			<textarea name="alasan" id="alasan" class="form-control form-control-lg" rows="3" maxlength="300" required></textarea>
+		</div>
+		<button type="submit" class="btn-lian hitam w-100"><i class="fa fa-paper-plane"></i> {% t "apply_send" %}</button>
+	</form>
+	{% endif %}
+
+	{% if riwayat %}
+	<h2 class="judul-langkah mt-4">{% t "apply_history" %}</h2>
+	<ul class="list-group">
+		{% for x in riwayat %}
+		<li class="list-group-item d-flex justify-content-between align-items-start">
+			<span><strong>{{ x.bahasa.nama }}</strong> · {{ x.datetime|date:"d/m/Y" }}{% if x.status == 'ditolak' and x.catatan %}<br><small class="text-danger">{% t "mine_reason" %}: {{ x.catatan }}</small>{% endif %}</span>
+			{% if x.status == 'disetujui' %}<span class="badge badge-success">{% t "mine_ok" %}</span>{% elif x.status == 'ditolak' %}<span class="badge badge-danger">{% t "mine_no" %}</span>{% else %}<span class="badge badge-warning">{% t "mine_wait" %}</span>{% endif %}
+		</li>
+		{% endfor %}
+	</ul>
+	{% endif %}
+</div>
+{% endblock %}

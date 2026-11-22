@@ -1,0 +1,18 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="mx-auto" style="max-width:520px">
+	<h1 class="judul-halaman text-center">{% t "role_title" %}</h1>
+	<form method="post" class="row">
+		{% csrf_token %}
+		{% for kode, kunci, ikon in peran_list %}
+			<div class="col-6 mb-4">
+				<button type="submit" name="peran" value="{{ kode }}" class="kartu {% if kode == peran_sekarang %}kartu-merah{% else %}kartu-kuning{% endif %} menu-kartu w-100 h-100 border-0" style="min-height:9.5rem">
+					<i class="fa {{ ikon }}" aria-hidden="true"></i>
+					<span class="judul">{% if kunci == 'role_anak' %}{% t "role_anak" %}{% elif kunci == 'role_dewasa' %}{% t "role_dewasa" %}{% elif kunci == 'role_guru' %}{% t "role_guru" %}{% else %}{% t "role_ibu_pasar" %}{% endif %}</span>
+				</button>
+			</div>
+		{% endfor %}
+	</form>
+</div>
+{% endblock %}

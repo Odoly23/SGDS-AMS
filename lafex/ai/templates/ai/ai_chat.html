@@ -1,0 +1,98 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block bicara %}{% endblock %}   {# di halaman ini lafaek besar di bawah adalah tombol bicara #}
+{% block content %}
+<div id="ai" data-bicara="{% url 'ai-bicara' %}" data-riwayat="{% url 'ai-riwayat' %}" data-hapus="{% url 'ai-hapus' %}"
+     data-sisa="{{ sisa }}" data-maks="{{ maks_teks }}"
+     data-lafaek="{% static 'main/images/lafaek.svg' %}" data-lafaek-buka="{% static 'main/images/lafaek-buka.svg' %}">
+
+	{# ===== 1. Pilih karakter AI ===== #}
+	<section id="pilih">
+		<h1 class="judul-halaman mt-0 text-center">{% t "ai_pick" %}</h1>
+		<a href="{% url 'video-call' %}" class="kartu kartu-merah kartu-level w-100 mb-3"><span class="gambar" aria-hidden="true"><i class="fa fa-phone" style="color:var(--navy)"></i></span><span class="flex-fill"><span class="judul">{% t "call_link" %}</span></span></a>
+		{% for k in karakter_list %}
+		<button type="button" class="kartu kartu-{{ k.warna }} kartu-level w-100 border-0 pilih-karakter" data-kode="{{ k.kode }}" data-nama="{{ k.nama_tet }}" data-emoji="{{ k.emoji }}" data-aksesori="{% static 'main/images/aksesori-'|add:k.kode|add:'.svg' %}">
+			<span class="gambar" aria-hidden="true"><span class="mini-lafaek"><img src="{% static 'main/images/lafaek.svg' %}" alt=""><img src="{% static 'main/images/aksesori-'|add:k.kode|add:'.svg' %}" alt=""></span></span>
+			<span class="flex-fill text-left">
+				<span class="nama d-block">{% ml k "nama" %}</span>
+				<span class="d-block small font-weight-bold">{% ml k "deskripsi" %}</span>
+				{% if k.contoh_tet %}<span class="d-block small mt-1" style="opacity:.9">“{{ k.contoh_tet }}”</span>{% endif %}
+			</span>
+		</button>
+		{% endfor %}
+	</section>
+
+	{# ===== 2. Bicara dengan lafaek ===== #}
+	<section id="obrol" hidden>
+		<div class="d-flex justify-content-between align-items-center mb-2 small font-weight-bold">
+			<span><span class="badge badge-warning" id="info-karakter"></span></span>
+			<span><span id="sisa">{% tpl "ai_remaining" n=sisa %}</span> · <a href="#" id="ganti" class="text-danger">{% t "account_change_role" %}</a></span>
+		</div>
+		{% if demo %}<div class="alert alert-warning p-2 small mb-2"><i class="fa fa-flask"></i> {% t "ai_demo" %}</div>{% endif %}
+
+		<div id="obrolan" class="obrolan" aria-live="polite"></div>
+
+		<div class="kontrol-ai">
+			<p id="pesan" class="text-center font-weight-bold small mb-2" role="status" hidden></p>
+			<div id="sementara" class="text-center text-muted font-italic mb-1" style="min-height:1.4rem"></div>
+
+			<div class="text-center">
+				<button type="button" id="lafaek" class="lafaek-btn" data-keadaan="diam" data-gaya="" aria-label="Lafaek">
+					<span class="gerak" id="gerak"><span class="badan">
+						<img id="img-lafaek" src="{% static 'main/images/lafaek.svg' %}" alt="">
+						<img id="aks-lafaek" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="">
+					</span></span>
+					<span class="emoji-gerak" id="emoji-gerak" aria-hidden="true"></span>
+				</button>
+				<div class="status-ai" id="status">
+					<span data-s="diam">{% t "ai_tap" %}</span>
+					<span data-s="dengar" hidden>{% t "ai_listening" %}</span>
+					<span data-s="pikir" hidden>{% t "ai_thinking" %}</span>
+					<span data-s="bicara" hidden>{% t "ai_speaking" %}</span>
+				</div>
+			</div>
+
+			<div class="aksi mt-2">
+				<button type="button" id="ulang" class="btn-lian kuning" disabled><i class="fa fa-volume-up"></i> {% t "ai_replay" %}</button>
+				<button type="button" id="berhenti" class="btn-lian hitam"><i class="fa fa-stop"></i> {% t "ai_stop" %}</button>
+			</div>
+
+			<form id="ketik" class="mt-2 d-flex" autocomplete="off">
+				<input id="teks" type="text" class="form-control" style="min-height:3.4rem;border-radius:14px;border:3px solid var(--navy-dk)" maxlength="{{ maks_teks }}" aria-label="Ketik">
+				<button type="submit" class="btn-lian merah ml-2" style="width:auto;min-width:4rem;min-height:3.4rem" aria-label="Haruka"><i class="fa fa-paper-plane"></i></button>
+			</form>
+
+		</div>
+
+		<div class="pengaturan-ai">
+			<div class="d-flex flex-wrap align-items-center mt-3 small font-weight-bold" style="gap:10px">
+				<label class="mb-0">{% t "ai_speak_lang" %}
+					<select id="bahasa" class="custom-select custom-select-sm d-inline-block w-auto ml-1">
+						<option value="tet">Tetun</option><option value="en">English</option><option value="pt">Português</option><option value="id">Bahasa Indonesia</option>
+					</select></label>
+				<label class="mb-0 d-flex align-items-center"><input type="checkbox" id="live" checked class="mr-1" style="width:1.2rem;height:1.2rem"> {% t "ai_live" %}</label>
+				<a href="#" id="hapus" class="text-danger ml-auto">{% t "ai_clear" %}</a>
+			</div>
+			<p class="small text-muted mt-3 mb-1" id="cat-tet" hidden><i class="fa fa-info-circle"></i> {% t "ai_tet_rec" %}</p>
+			<p class="small text-muted mb-1"><i class="fa fa-volume-up"></i> {% t "ai_voice_note" %}</p>
+			<p class="small text-muted mb-0"><i class="fa fa-lock"></i> {% t "ai_stt_note" %}</p>
+		</div>
+	</section>
+
+	{# teks pesan 4 bahasa (diambil JS) #}
+	<template id="t-ai_no_speech">{% t "ai_no_speech" %}</template>
+	<template id="t-ai_no_support">{% t "ai_no_support" %}</template>
+	<template id="t-ai_limit">{% t "ai_limit" %}</template>
+	<template id="t-ai_error">{% t "ai_error" %}</template>
+	<template id="t-ai_slow">{% t "ai_slow" %}</template>
+	<template id="t-ai_cleared">{% t "ai_cleared" %}</template>
+	<template id="t-mic_error">{% t "mic_error" %}</template>
+	<template id="t-ai_correction">{% t "ai_correction" %}</template>
+	<template id="t-ai_you">{% t "ai_you" %}</template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'main/js/rekam.js' %}"></script>
+<script src="{% static 'ai/ai_chat.js' %}"></script>
+{% endblock %}

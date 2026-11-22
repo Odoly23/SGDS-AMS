@@ -1,0 +1,32 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="main-content mx-auto" style="max-width:440px">
+	<img class="maskot" src="{% static 'main/images/lafaek.svg' %}" alt="">
+	<h1 class="judul-halaman text-center mt-0">{% t "login_title" %}</h1>
+	<p class="text-center text-muted">{% t "login_hint" %}</p>
+
+	<form method="post" action="{% url 'login' %}" novalidate>
+		{% csrf_token %}
+		<div class="form-group">
+			<label for="id_kontak" class="font-weight-bold">{% t "field_contact" %}</label>
+			<input id="id_kontak" name="kontak" type="text" inputmode="email" autocomplete="username" autocapitalize="none" class="form-control form-control-lg" value="{{ kontak }}" required>
+		</div>
+		<div class="form-group">
+			<label for="id_password" class="font-weight-bold">{% t "field_password" %}</label>
+			<input id="id_password" name="password" type="password" autocomplete="current-password" class="form-control form-control-lg" required>
+		</div>
+		<button type="submit" class="btn-lian merah">{% t "btn_login" %}</button>
+	</form>
+
+	<div class="pemisah">atau / ou / or</div>
+
+	<form method="post" action="{% url 'tamu' %}">
+		{% csrf_token %}
+		<button type="submit" class="btn-lian kuning">{% t "btn_guest" %}</button>
+		<p class="text-center text-muted small mt-2 mb-0">{% t "guest_hint" %}</p>
+	</form>
+
+	<p class="text-center mt-4 mb-0">{% t "no_account" %} <a href="{% url 'register' %}" class="font-weight-bold">{% t "btn_register" %}</a></p>
+</div>
+{% endblock %}

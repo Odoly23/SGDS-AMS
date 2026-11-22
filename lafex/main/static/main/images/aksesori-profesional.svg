@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- AI Matenek: kacamata bulat + dasi kupu-kupu -->
+  <path d="M75 29L90 34" stroke="#1B1411" stroke-width="2.8" stroke-linecap="round"/>
+  <circle cx="64" cy="31" r="11.5" fill="#fff" fill-opacity=".28" stroke="#1B1411" stroke-width="3"/>
+  <path d="M57 26Q60 23 65 23" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+  <g stroke="#1B1411" stroke-width="2" stroke-linejoin="round">
+    <polygon points="48,80 61,86 48,92" fill="#C8201A"/><polygon points="74,80 61,86 74,92" fill="#C8201A"/>
+    <rect x="57.5" y="82.5" width="7" height="7" rx="2" fill="#9E1812"/>
+  </g>
+</svg>

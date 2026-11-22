@@ -1,0 +1,10 @@
+# Dependensi untuk menjalankan TES di CI: sama dengan requirements.txt TANPA sentence-transformers (butuh PyTorch, beberapa GB; diimpor malas
+# dan tidak dipakai tes) dan tanpa psycopg (CI memakai SQLite).
+Django>=5.0,<5.3
+djangorestframework>=3.15
+python-dotenv>=1.0
+django-allauth[socialaccount]>=65.0
+anthropic>=2.0
+pypdf>=4.0
+numpy>=1.26
+langdetect>=1.0.9

@@ -15,7 +15,7 @@ class MessageInline(admin.TabularInline):
     model = Message
     extra = 0
     can_delete = False
-    readonly_fields = ("role", "content", "detected_language", "sources", "model_name", "latency_ms", "created_at")
+    readonly_fields = ("role", "content", "detected_language", "sources", "model_name", "latency_ms", "input_tokens", "output_tokens", "credits_charged", "created_at")
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -40,7 +40,7 @@ class ConversationAdmin(admin.ModelAdmin):
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ("id", "conversation", "role", "short_content", "detected_language", "latency_ms", "created_at")
+    list_display = ("id", "conversation", "role", "short_content", "detected_language", "credits_charged", "latency_ms", "created_at")
     list_filter = ("role", "detected_language", "created_at")
     search_fields = ("content",)
     readonly_fields = [f.name for f in Message._meta.fields]

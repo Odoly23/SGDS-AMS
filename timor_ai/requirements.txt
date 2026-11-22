@@ -7,6 +7,12 @@ djangorestframework>=3.15
 psycopg[binary]>=3.1        # driver PostgreSQL (aman di Windows & Linux)
 python-dotenv>=1.0          # baca file .env
 
+# --- Login email + Facebook ---
+django-allauth[socialaccount]>=65.0
+
+# --- Model berbayar lewat API (LLM_BACKEND=anthropic) ---
+anthropic>=2.0
+
 # --- RAG ---
 pypdf>=4.0                  # ekstrak teks dari PDF
 numpy>=1.26                 # hitung kemiripan vektor

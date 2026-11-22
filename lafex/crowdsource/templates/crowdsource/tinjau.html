@@ -1,0 +1,75 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block bicara %}{% endblock %}
+{% block content %}
+<h1 class="judul-halaman mt-0">{% t "rev_title" %}</h1>
+<div class="mb-3 d-flex flex-wrap" style="gap:8px">
+	<a class="btn btn-sm btn-outline-dark" href="{% url 'ai-suara' %}"><i class="fa fa-cogs"></i> {% t "voice_link" %}</a>
+	{% if stt_siap %}<form method="post" action="{% url 'crowdsource-whisper-semua' %}" class="m-0">{% csrf_token %}<button class="btn btn-sm btn-dark" type="submit"><i class="fa fa-magic"></i> {% t "stt_all" %}</button></form>{% endif %}
+</div>
+
+<div class="mb-3">
+	<a class="btn btn-sm {% if status == 'menunggu' %}btn-warning{% else %}btn-outline-dark{% endif %}" href="?status=menunggu{% if bahasa %}&bahasa={{ bahasa }}{% endif %}">{% t "mine_wait" %} ({{ jumlah.menunggu }})</a>
+	<a class="btn btn-sm {% if status == 'disetujui' %}btn-success{% else %}btn-outline-dark{% endif %}" href="?status=disetujui{% if bahasa %}&bahasa={{ bahasa }}{% endif %}">{% t "mine_ok" %} ({{ jumlah.disetujui }})</a>
+	<a class="btn btn-sm {% if status == 'ditolak' %}btn-danger{% else %}btn-outline-dark{% endif %}" href="?status=ditolak{% if bahasa %}&bahasa={{ bahasa }}{% endif %}">{% t "mine_no" %} ({{ jumlah.ditolak }})</a>
+	<a class="btn btn-sm {% if status == 'semua' %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?status=semua{% if bahasa %}&bahasa={{ bahasa }}{% endif %}">{% t "rev_all" %}</a>
+</div>
+<div class="mb-3">
+	<a class="badge {% if not bahasa %}badge-dark{% else %}badge-light{% endif %}" href="?status={{ status }}">{% t "rev_all" %}</a>
+	{% for b in bahasa_list %}<a class="badge {% if bahasa == b.kode %}badge-dark{% else %}badge-light{% endif %}" href="?status={{ status }}&bahasa={{ b.kode }}">{{ b.nama }}</a> {% endfor %}
+</div>
+
+{% with kembali=request.get_full_path %}
+{% for r in halaman %}
+<div class="main-content p-3 mb-3">
+	<div class="d-flex justify-content-between flex-wrap">
+		<strong>{{ r.kalimat.emoji }} {{ r.kalimat.teks_tet }}</strong>
+		<span class="badge {% if r.status == 'disetujui' %}badge-success{% elif r.status == 'ditolak' %}badge-danger{% else %}badge-warning{% endif %}">{{ r.get_status_display }}</span>
+	</div>
+	<small class="d-block mb-2">{{ r.bahasa.nama }} · {{ r.gaya.nama_tet }} · {{ r.durasi_detik|floatformat:1 }}s · {{ r.datetime|date:"d/m/Y H:i" }}{% if r.status == 'ditolak' and r.alasan_tolak %} · {{ r.alasan_tolak }}{% endif %}</small>
+	<audio controls preload="none" src="{% url 'crowdsource-audio' r.pk %}" class="w-100 mb-2"></audio>
+
+	<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="mb-2">{% csrf_token %}
+		<input type="hidden" name="aksi" value="transkripsi"><input type="hidden" name="kembali" value="{{ kembali }}">
+		<label class="small mb-1" for="tr{{ r.pk }}">{% t "rev_transcript" %}
+			{% if r.sumber_transkripsi == 'otomatis' %}<span class="badge badge-warning">{% t "stt_draft" %}</span>{% elif r.sumber_transkripsi == 'kontributor' %}<span class="badge badge-info">{% t "src_kontributor" %}</span>{% elif r.sumber_transkripsi == 'admin' %}<span class="badge badge-success">{% t "src_admin" %}</span>{% endif %}</label>
+		<div class="input-group">
+			<input class="form-control" id="tr{{ r.pk }}" name="transkripsi" maxlength="1000" value="{{ r.transkripsi }}">
+			<div class="input-group-append"><button class="btn btn-dark" type="submit">{% t "rev_save" %}</button></div>
+		</div>
+	</form>
+	{% if stt_siap and r.sumber_transkripsi != 'admin' %}
+	<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="mb-2">{% csrf_token %}
+		<input type="hidden" name="aksi" value="whisper"><input type="hidden" name="kembali" value="{{ kembali }}">
+		<button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa fa-magic"></i> {% t "stt_btn" %}</button>
+	</form>
+	{% endif %}
+
+	<div class="d-flex flex-wrap align-items-center" style="gap:8px">
+		<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="m-0">{% csrf_token %}
+			<input type="hidden" name="aksi" value="setujui"><input type="hidden" name="kembali" value="{{ kembali }}">
+			<button class="btn btn-success" type="submit"><i class="fa fa-check"></i> {% t "rev_approve" %}</button>
+		</form>
+		<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="m-0 d-flex" style="gap:6px">{% csrf_token %}
+			<input type="hidden" name="aksi" value="tolak"><input type="hidden" name="kembali" value="{{ kembali }}">
+			<input class="form-control" name="alasan" maxlength="200" placeholder="..." {% tattr 'rev_reason' %}>
+			<button class="btn btn-danger" type="submit"><i class="fa fa-times"></i> {% t "rev_reject" %}</button>
+		</form>
+		<form method="post" action="{% url 'crowdsource-aksi' r.pk %}" class="m-0 ml-auto">{% csrf_token %}
+			<input type="hidden" name="aksi" value="matikan"><input type="hidden" name="kembali" value="{{ kembali }}">
+			<button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm(this.getAttribute('aria-label'))" {% tattr 'rev_off_ask' %}><i class="fa fa-ban"></i> {% t "rev_off" %}</button>
+		</form>
+	</div>
+</div>
+{% empty %}
+<p class="text-center">{% t "rev_empty" %}</p>
+{% endfor %}
+{% endwith %}
+
+{% if halaman.has_other_pages %}
+<div class="d-flex justify-content-between mb-4">
+	{% if halaman.has_previous %}<a class="btn btn-outline-dark" href="?status={{ status }}{% if bahasa %}&bahasa={{ bahasa }}{% endif %}&hal={{ halaman.previous_page_number }}">{% t "rev_prev" %}</a>{% else %}<span></span>{% endif %}
+	{% if halaman.has_next %}<a class="btn btn-outline-dark" href="?status={{ status }}{% if bahasa %}&bahasa={{ bahasa }}{% endif %}&hal={{ halaman.next_page_number }}">{% t "rev_more" %}</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

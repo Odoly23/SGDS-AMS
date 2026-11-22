@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Bantu Bahasa Daerah – LAFEX-AI{% endblock %}
+{% block body %}
+<main class="max-w-xl mx-auto p-4 space-y-4">
+  <header class="flex items-center justify-between">
+    <a href="{% url 'chat-page' %}" class="text-sm text-red-700 underline">← Kembali ke chat</a>
+    <span class="text-sm text-slate-500">{{ user.email|default:user.username }}</span>
+  </header>
+
+  <section class="bg-white rounded-2xl shadow p-4">
+    <h1 class="text-xl font-bold">Bantu LAFEX belajar bahasa daerah</h1>
+    <p class="text-sm text-slate-600 mt-1">Tulis terjemahan atau periksa tulisan orang lain. Setelah dicek penutur ahli (terverifikasi), Anda mendapat <b>poin gratis</b> untuk chat.</p>
+    <dl id="stats" class="grid grid-cols-4 gap-2 text-center mt-3 text-xs text-slate-500">
+      <div><dd id="s-sub" class="text-lg font-bold text-slate-800">–</dd><dt>Dikirim</dt></div>
+      <div><dd id="s-ver" class="text-lg font-bold text-slate-800">–</dd><dt>Terverifikasi</dt></div>
+      <div><dd id="s-vote" class="text-lg font-bold text-slate-800">–</dd><dt>Diperiksa</dt></div>
+      <div><dd id="s-pts" class="text-lg font-bold text-orange-600">–</dd><dt>Poin didapat</dt></div>
+    </dl>
+  </section>
+
+  <div class="bg-white rounded-2xl shadow p-4 space-y-3">
+    <div class="flex items-center gap-2 text-sm">
+      <label for="lang" class="font-medium">Bahasa yang saya kuasai:</label>
+      <select id="lang" class="border rounded-lg px-2 py-1 flex-1 min-w-0"></select>
+    </div>
+    <p class="text-xs text-slate-500">Pilih bahasa yang benar-benar Anda kuasai. Jika ragu, jangan diisi. Jawaban asal akan ditolak reviewer.</p>
+
+    <div class="grid grid-cols-3 gap-1 bg-slate-100 rounded-xl p-1 text-sm font-medium" role="tablist">
+      <button class="tab py-2 rounded-lg" data-tab="write" role="tab">Terjemahkan</button>
+      <button class="tab py-2 rounded-lg" data-tab="check" role="tab">Periksa</button>
+      <button class="tab py-2 rounded-lg" data-tab="board" role="tab">Papan skor</button>
+    </div>
+
+    <!-- tab: terjemahkan -->
+    <section id="tab-write" class="space-y-3">
+      <div id="writeBox"></div>
+      <form id="writeForm" class="space-y-2 hidden">
+        <label class="block text-sm font-medium" for="text">Terjemahan Anda</label>
+        <textarea id="text" rows="3" maxlength="500" required class="w-full border rounded-lg px-3 py-2"></textarea>
+        <input id="dialect" maxlength="80" placeholder="Dialek / daerah (opsional, mis. Ainaro)" class="w-full border rounded-lg px-3 py-2 text-sm">
+        <div class="flex gap-2">
+          <button class="flex-1 bg-red-700 hover:bg-red-800 text-white rounded-lg py-2 font-medium">Kirim</button>
+          <button type="button" id="skipWrite" class="px-4 border rounded-lg">Lewati</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- tab: periksa -->
+    <section id="tab-check" class="space-y-3 hidden">
+      <div id="checkBox"></div>
+      <div id="voteBtns" class="grid grid-cols-3 gap-2 hidden">
+        <button data-v="1" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2 font-medium">Benar</button>
+        <button data-v="0" class="bg-rose-600 hover:bg-rose-700 text-white rounded-lg py-2 font-medium">Salah</button>
+        <button data-v="skip" class="border rounded-lg">Lewati</button>
+      </div>
+    </section>
+
+    <!-- tab: papan skor -->
+    <section id="tab-board" class="hidden"><ol id="board" class="space-y-1 text-sm"></ol></section>
+
+    <p id="msg" class="text-sm min-h-5" role="status"></p>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const csrf = () => document.cookie.split("; ").find(c => c.startsWith("csrftoken="))?.split("=")[1] || "{{ csrf_token }}";
+async function api(url, opts = {}) {
+  const res = await fetch(url, {headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()}, credentials: "same-origin", ...opts});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Terjadi kesalahan.");
+  return data;
+}
+const say = (t, ok) => { $("msg").textContent = t || ""; $("msg").className = "text-sm min-h-5 " + (ok ? "text-emerald-700" : "text-red-600"); };
+
+// kartu sumber (textContent -> aman dari XSS)
+function sourceCards(list, ai) {
+  const wrap = document.createElement("div"); wrap.className = "space-y-2";
+  list.forEach(s => {
+    const d = document.createElement("div"); d.className = "rounded-xl bg-slate-100 px-3 py-2";
+    const l = document.createElement("div"); l.className = "text-xs text-slate-500"; l.textContent = s.name;
+    const t = document.createElement("div"); t.className = "text-base"; t.textContent = s.text;
+    d.append(l, t); wrap.appendChild(d);
+  });
+  return wrap;
+}
+function note(text) { const p = document.createElement("p"); p.className = "text-sm text-slate-600 py-4 text-center"; p.textContent = text; return p; }
+
+let task = null, review = null;
+
+async function loadStats() {
+  const d = await api("/api/contribute/stats/");
+  $("s-sub").textContent = d.me.submitted; $("s-ver").textContent = d.me.verified;
+  $("s-vote").textContent = d.me.votes; $("s-pts").textContent = d.me.points_earned;
+  const ol = $("board"); ol.innerHTML = "";
+  if (!d.leaderboard.length) ol.appendChild(note("Belum ada terjemahan terverifikasi. Jadilah yang pertama!"));
+  d.leaderboard.forEach(r => {
+    const li = document.createElement("li");
+    li.className = "flex justify-between rounded-lg px-3 py-2 " + (r.me ? "bg-orange-100 font-semibold" : "bg-slate-100");
+    const a = document.createElement("span"); a.textContent = `${r.rank}. ${r.name}${r.me ? " (Anda)" : ""}`;
+    const b = document.createElement("span"); b.textContent = `${r.verified} terverifikasi`;
+    li.append(a, b); ol.appendChild(li);
+  });
+}
+
+async function loadTask() {
+  $("writeBox").innerHTML = ""; $("writeForm").classList.add("hidden"); say("");
+  try {
+    task = (await api("/api/contribute/next/?language=" + encodeURIComponent($("lang").value))).task;
+  } catch (e) { say(e.message); return; }
+  if (!task) { $("writeBox").appendChild(note("Tidak ada kalimat lagi untuk bahasa ini. Terima kasih! Coba tab Periksa.")); return; }
+  const lead = document.createElement("p"); lead.className = "text-sm";
+  const lang = $("lang").selectedOptions[0].textContent;
+  lead.textContent = `Bagaimana mengatakan ini dalam bahasa ${lang}?` + (task.context ? ` (${task.context})` : "");
+  $("writeBox").append(lead, sourceCards(task.sources));
+  $("writeForm").classList.remove("hidden"); $("text").value = ""; $("text").focus();
+}
+$("writeForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    await api("/api/contribute/", {method: "POST", body: JSON.stringify({phrase: task.phrase, language: $("lang").value, text: $("text").value, dialect: $("dialect").value})});
+    say("Terima kasih! Terjemahan Anda menunggu diperiksa.", true); loadStats(); setTimeout(loadTask, 600);
+  } catch (err) { say(err.message); }
+});
+$("skipWrite").onclick = loadTask;
+
+async function loadReview() {
+  $("checkBox").innerHTML = ""; $("voteBtns").classList.add("hidden"); say("");
+  try {
+    review = (await api("/api/contribute/review/?language=" + encodeURIComponent($("lang").value))).item;
+  } catch (e) { say(e.message); return; }
+  if (!review) { $("checkBox").appendChild(note("Belum ada terjemahan untuk diperiksa di bahasa ini.")); return; }
+  const lead = document.createElement("p"); lead.className = "text-sm";
+  lead.textContent = `Apakah terjemahan ${review.language_name} ini benar dan wajar?`;
+  const card = document.createElement("div"); card.className = "rounded-xl border-2 border-orange-300 px-3 py-3";
+  const t = document.createElement("div"); t.className = "text-lg font-medium"; t.textContent = review.text; card.appendChild(t);
+  if (review.dialect) { const d = document.createElement("div"); d.className = "text-xs text-slate-500"; d.textContent = "Dialek: " + review.dialect; card.appendChild(d); }
+  if (review.ai_draft) { const d = document.createElement("div"); d.className = "text-xs text-amber-700 mt-1"; d.textContent = "Draf buatan AI, mohon dikoreksi jika salah."; card.appendChild(d); }
+  $("checkBox").append(lead, card, sourceCards(review.sources));
+  $("voteBtns").classList.remove("hidden");
+}
+$("voteBtns").addEventListener("click", async (e) => {
+  const v = e.target.dataset && e.target.dataset.v; if (v === undefined) return;
+  if (v === "skip") { loadReview(); return; }
+  try {
+    await api("/api/contribute/vote/", {method: "POST", body: JSON.stringify({translation: review.translation, agree: v === "1"})});
+    say("Suara tercatat. Terima kasih!", true); loadStats(); setTimeout(loadReview, 500);
+  } catch (err) { say(err.message); }
+});
+
+// tab & bahasa
+function showTab(name) {
+  ["write", "check", "board"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== name));
+  document.querySelectorAll(".tab").forEach(b => { const on = b.dataset.tab === name; b.setAttribute("aria-selected", on); b.className = "tab py-2 rounded-lg " + (on ? "bg-white shadow" : "text-slate-500"); });
+  say(""); if (name === "write") loadTask(); if (name === "check") loadReview(); if (name === "board") loadStats();
+}
+document.querySelectorAll(".tab").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+$("lang").addEventListener("change", () => { try { localStorage.setItem("contribLang", $("lang").value); } catch (e) {} const on = document.querySelector('.tab[aria-selected="true"]').dataset.tab; showTab(on); });
+
+(async function init() {
+  const langs = await api("/api/languages/");
+  const groups = {"Bahasa daerah": langs.filter(l => !["official", "working"].includes(l.kind)), "Bahasa utama": langs.filter(l => ["official", "working"].includes(l.kind))};
+  for (const [label, items] of Object.entries(groups)) {
+    const og = document.createElement("optgroup"); og.label = label;
+    items.forEach(l => og.appendChild(new Option(l.name + (l.verification === "verify" ? " (?)" : ""), l.code))); $("lang").appendChild(og);
+  }
+  try { const saved = localStorage.getItem("contribLang"); if (saved) $("lang").value = saved; } catch (e) {}
+  loadStats(); showTab("write");
+})();
+</script>
+{% endblock %}

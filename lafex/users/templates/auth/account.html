@@ -1,0 +1,26 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block content %}
+<div class="main-content mx-auto" style="max-width:520px">
+	<h1 class="judul-halaman mt-0">{% t "account_title" %}</h1>
+	<form method="post" class="mb-3">{% csrf_token %}
+		<label for="naran" class="font-weight-bold mb-1">{% t "account_naran" %}</label>
+		<div class="input-group">
+			<input type="text" id="naran" name="naran" value="{{ naran }}" maxlength="80" autocomplete="name" class="form-control form-control-lg" placeholder="Ex: Vicente Sousa" {% tattr "account_naran_ph" %}>
+			<div class="input-group-append"><button type="submit" class="btn btn-dark">{% t "rev_save" %}</button></div>
+		</div>
+		<small class="text-muted">{% t "account_naran_help" %}</small>
+	</form>
+	<table class="table">
+		<tr><th>{% t "col_user" %}</th><td>{% if perfil.is_tamu %}{% t "account_guest" %}{% else %}{{ user.email|default:perfil.telepon }}{% endif %}</td></tr>
+		<tr><th>{% t "account_group" %}</th><td>{{ group }}</td></tr>
+		<tr><th>{% t "account_role" %}</th><td>
+			{% if perfil.peran == 'anak' %}{% t "role_anak" %}{% elif perfil.peran == 'dewasa' %}{% t "role_dewasa" %}{% elif perfil.peran == 'guru' %}{% t "role_guru" %}{% elif perfil.peran == 'ibu_pasar' %}{% t "role_ibu_pasar" %}{% else %}-{% endif %}
+			<a href="{% url 'user-peran' %}" class="ml-2 small font-weight-bold">{% t "account_change_role" %}</a></td></tr>
+	</table>
+	{% if group == 'pelajar' %}<p><a href="{% url 'user-ajukan' %}" class="font-weight-bold"><i class="fa fa-microphone"></i> {% t "apply_link" %}</a></p>{% elif group == 'kontributor' %}<p class="font-weight-bold"><i class="fa fa-check-circle text-success"></i> {% t "apply_done" %}</p>{% endif %}
+	<form method="post" action="{% url 'logout' %}">{% csrf_token %}
+		<button type="submit" class="btn-lian hitam"><i class="fa fa-sign-out"></i> {% t "nav_logout" %}</button>
+	</form>
+</div>
+{% endblock %}

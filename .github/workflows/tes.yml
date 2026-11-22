@@ -1,0 +1,73 @@
+name: Tes
+
+# Menjalankan seluruh tes untuk kedua proyek pada setiap pull request dan setiap push ke main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tes-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Hanya untuk CI (tidak rahasia, tidak dipakai di produksi). Panjang >= 50 agar `check --deploy` tidak mengeluh.
+  DJANGO_SECRET_KEY: ci-kunci-uji-bukan-untuk-produksi-0123456789abcdefghijklmnopqrstuvwxyz
+  DB_ENGINE: sqlite
+
+jobs:
+  lafex:
+    name: lafex (aplikasi belajar)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: lafex
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lafex/requirements.txt
+      - name: Pasang ffmpeg (untuk tes ekspor data suara)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Pasang dependensi
+        run: pip install -r requirements.txt
+      - name: Migrasi sudah lengkap?
+        run: python manage.py makemigrations --check --dry-run
+        env:
+          DJANGO_DEBUG: "1"
+      - name: Tes
+        run: python manage.py test
+      - name: Pengaturan produksi bisa dimuat (check --deploy)
+        run: python manage.py check --deploy
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_ALLOWED_HOSTS: contoh.com
+
+  timor_ai:
+    name: timor_ai (LAFEX-AI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: timor_ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: timor_ai/requirements-ci.txt
+      - name: Pasang dependensi
+        run: pip install -r requirements-ci.txt
+      - name: Migrasi sudah lengkap?
+        run: python manage.py makemigrations --check --dry-run
+        env:
+          DJANGO_DEBUG: "1"
+      - name: Tes
+        run: python manage.py test

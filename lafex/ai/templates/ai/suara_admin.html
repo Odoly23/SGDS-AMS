@@ -1,0 +1,37 @@
+{% extends "main/layout.html" %}
+{% load static lafex_tags %}
+{% block bicara %}{% endblock %}
+{% block content %}
+<h1 class="judul-halaman mt-0">{% t "voice_title" %}</h1>
+<p><a class="btn btn-sm btn-outline-dark" href="{% url 'crowdsource-tinjau' %}">&lsaquo; {% t "rev_title" %}</a></p>
+
+<div class="row">
+	<div class="col-12 col-md-6 mb-3"><div class="main-content p-3 h-100">
+		<h2 class="judul-langkah mt-0">Whisper (suara &rarr; teks)</h2>
+		<p class="mb-1"><span class="badge {% if stt.status == 'hidup' %}badge-success{% elif stt.status == 'mati' %}badge-danger{% else %}badge-secondary{% endif %}">{{ stt.status }}</span> <code>{{ stt.url|default:"STT_URL kosong" }}</code></p>
+		<small>Model: <code>{{ stt.model }}</code></small>
+	</div></div>
+	<div class="col-12 col-md-6 mb-3"><div class="main-content p-3 h-100">
+		<h2 class="judul-langkah mt-0">XTTS (teks &rarr; suara)</h2>
+		<p class="mb-1"><span class="badge {% if tts.status == 'hidup' %}badge-success{% elif tts.status == 'mati' %}badge-danger{% else %}badge-secondary{% endif %}">{{ tts.status }}</span> <code>{{ tts.url|default:"TTS_URL kosong" }}</code></p>
+		<small>Bahasa XTTS: <code>{{ tts.bahasa }}</code> (XTTS bawaan tidak punya Tetun)</small>
+	</div></div>
+</div>
+
+<div class="main-content p-3 mb-3">
+	<h2 class="judul-langkah mt-0">Data latihan siap pakai: {{ total_menit }} menit</h2>
+	<p class="small mb-2">Dihitung dari rekaman <b>disetujui</b> yang punya transkripsi <b>bukan draf Whisper</b>. Draf Whisper menunggu pemeriksaan: <b>{{ draf }}</b>. Disetujui tanpa transkripsi: <b>{{ tanpa }}</b>.</p>
+	{% if per_bahasa %}
+	<ul class="list-group mb-2">
+		{% for b in per_bahasa %}<li class="list-group-item d-flex justify-content-between"><strong>{{ b.bahasa__nama }}</strong><span>{{ b.n }} rekaman · {{ b.menit }} menit</span></li>{% endfor %}
+	</ul>
+	{% else %}<p class="text-muted">Belum ada.</p>{% endif %}
+	<p class="small mb-0">Berapa cukup? Tetun/bahasa daerah butuh puluhan jam audio bertranskripsi dari banyak penutur agar Whisper atau XTTS terdengar baik. Belasan menit hanya untuk uji alur, bukan untuk dipakai pengguna.</p>
+</div>
+
+<div class="main-content p-3 mb-3">
+	<h2 class="judul-langkah mt-0">Ekspor &amp; latih</h2>
+<pre class="mb-2" style="white-space:pre-wrap">python manage.py export_suara --out data_suara --bahasa fataluku</pre>
+	<p class="small mb-0">Hasil: <code>data_suara/whisper/</code> (train.jsonl + wav 16 kHz) dan <code>data_suara/xtts/</code> (metadata.csv + wav 22,05 kHz). Langkah latih lengkap ada di <code>docs/MELATIH_SUARA.md</code>.</p>
+</div>
+{% endblock %}
