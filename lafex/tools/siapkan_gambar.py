@@ -19,6 +19,7 @@ from PIL import Image
 from scipy import ndimage
 
 CELAH_MIN = 5000          # luas (piksel, pada gambar 1600 px) minimal agar putih terkurung dianggap latar
+LUBANG_WARNA_MAKS = 40000   # latar berwarna: bagian PUCAT milik maskot (mis. sisi halaman buku) yang terkurung ikut ditutup
 POSE = ('diam', 'ngomong', 'jempol', 'mikir', 'lambai')
 
 
@@ -49,6 +50,28 @@ def buat_alfa(rgb):
 	return np.clip(alfa * 255, 0, 255).astype('uint8'), depan
 
 
+def buat_alfa_warna(rgb, ambang=0.24):
+	"""Untuk latar BERGAMBAR/berwarna pucat (mis. ruang kelas pastel): maskot berwarna JENUH, latar pucat. Alfa dari kejenuhan warna;
+	hanya benda jenuh TERBESAR (maskot) yang dipertahankan, sehingga tulisan/benda di latar terbuang."""
+	a = rgb.astype(float) / 255
+	mx, mn = a.max(2), a.min(2)
+	jenuh = (mx - mn) / np.maximum(mx, 1e-6)
+	depan = ndimage.binary_opening(jenuh > ambang, iterations=2)
+	label, n = ndimage.label(depan)
+	if n > 1:
+		ukuran = ndimage.sum(depan, label, range(1, n + 1))
+		depan = label == (1 + int(np.argmax(ukuran)))
+	depan = ndimage.binary_closing(depan, iterations=3)                      # sambungkan bingkai kacamata dsb.
+	lubang = ndimage.binary_fill_holes(depan) & ~depan                      # tutup lubang KECIL saja
+	lab, m = ndimage.label(lubang)
+	if m:
+		kecil = [i + 1 for i, u in enumerate(ndimage.sum(lubang, lab, range(1, m + 1))) if u < LUBANG_WARNA_MAKS]
+		depan = depan | np.isin(lab, kecil)
+	depan = ndimage.binary_erosion(depan, iterations=1)
+	alfa = ndimage.gaussian_filter(depan.astype(float), 1.0)
+	return np.clip(alfa * 255, 0, 255).astype('uint8'), depan
+
+
 def main():
 	a = argparse.ArgumentParser()
 	a.add_argument('--mode', required=True, help='preman | pintar | pro')
@@ -56,6 +79,8 @@ def main():
 	for p in POSE:
 		a.add_argument(f'--{p}')
 	a.add_argument('--tinggi', type=int, default=900, help='tinggi akhir (piksel)')
+	a.add_argument('--latar', choices=('putih', 'warna'), default='putih', help="putih = latar putih polos; warna = latar bergambar pucat (maskot lebih jenuh)")
+	a.add_argument('--ambang', type=float, default=0.24, help='ambang kejenuhan untuk --latar warna')
 	o = a.parse_args()
 	pakai = [(p, getattr(o, p)) for p in POSE if getattr(o, p)]
 	if not all(os.path.exists(f) for _, f in pakai):
@@ -63,7 +88,7 @@ def main():
 	hasil, kotak = {}, None
 	for pose, f in pakai:
 		im = Image.open(f).convert('RGB')
-		alfa, depan = buat_alfa(np.asarray(im))
+		alfa, depan = buat_alfa(np.asarray(im)) if o.latar == 'putih' else buat_alfa_warna(np.asarray(im), o.ambang)
 		ys, xs = np.where(depan)
 		k = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
 		kotak = k if kotak is None else (min(kotak[0], k[0]), min(kotak[1], k[1]), max(kotak[2], k[2]), max(kotak[3], k[3]))

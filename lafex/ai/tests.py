@@ -409,13 +409,14 @@ class GambarLafex(TestCase):
 		w, h, kedalaman, warna = struct.unpack('>IIBB', kepala[16:26])
 		return w, h, warna
 
-	def test_preman_lengkap_transparan_dan_seukuran(self):
+	def test_mode_yang_gambarnya_sudah_ada_lengkap_transparan_dan_seukuran(self):
 		from django.contrib.staticfiles import finders
-		ukuran = set()
-		for pose in ('diam', 'ngomong', 'jempol', 'mikir', 'lambai'):
-			jalur = finders.find(f'img/lafex/preman_{pose}.png')
-			self.assertIsNotNone(jalur, pose)
-			w, h, warna = self._ukuran(jalur)
-			self.assertEqual(warna, 6, f'{pose}: harus RGBA (latar transparan)')
-			ukuran.add((w, h))
-		self.assertEqual(len(ukuran), 1, f'semua pose harus seukuran: {ukuran}')
+		for mode in ('preman', 'pintar'):                      # 'pro' menyusul bila gambarnya sudah dikirim
+			ukuran = set()
+			for pose in ('diam', 'ngomong', 'jempol', 'mikir', 'lambai'):
+				jalur = finders.find(f'img/lafex/{mode}_{pose}.png')
+				self.assertIsNotNone(jalur, f'{mode}_{pose}')
+				w, h, warna = self._ukuran(jalur)
+				self.assertEqual(warna, 6, f'{mode}_{pose}: harus RGBA (latar transparan)')
+				ukuran.add((w, h))
+			self.assertEqual(len(ukuran), 1, f'{mode}: semua pose harus seukuran: {ukuran}')
