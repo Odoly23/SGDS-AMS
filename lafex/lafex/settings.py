@@ -94,7 +94,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v9"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v10"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
 
 # ---------- Percakapan suara dengan AI (ai_chat) ----------
 # BACKEND: "dummy" = balasan contoh | "local" = model gratis/open-source (Gemma dll, server Ollama/llama.cpp/vLLM) | "anthropic" = model berbayar lewat API (Anda membayar per token).
@@ -136,6 +136,6 @@ SUARA = {
 	"WHISPER_BATCH": 15,                                 # maksimal rekaman sekali "Whisper semua"
 }
 
-# Beranda "tanpa klik ke mana-mana": pelajar (semua orang, termasuk tamu) yang masuk LANGSUNG tiba di layar panggilan LAFEX.
-# Pilihan bahasa/topik/mode/durasi ada di layar itu dan diingat. Set 0 untuk kembali ke beranda berisi kartu menu.
-HOME_LANGSUNG_BICARA = os.getenv("HOME_LANGSUNG_BICARA", "1") == "1"
+# 1 = pelajar yang masuk dialihkan langsung ke /video-call/ (tanpa halaman Siswa). BAWAAN 0: siswa memilih materi di halaman Siswa,
+# lalu menekan "Bicara dengan LAFEX" (satu klik) ke /video-call/?mode=..&bahasa=..&topik=.. .
+HOME_LANGSUNG_BICARA = os.getenv("HOME_LANGSUNG_BICARA", "0") == "1"

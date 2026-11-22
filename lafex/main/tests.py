@@ -1,6 +1,8 @@
+from django.conf import settings
 """Tes halaman utama, login, tamu, menu per group, dan PWA."""
 import json
 
+import re
 from django.contrib.auth.models import Group, User
 from django.core.cache import cache
 from django.core.management import call_command
@@ -223,51 +225,69 @@ class BuatAdmin(Dasar):
 
 
 class BerandaLangsungBicara(TestCase):
-	"""Semua orang (pelajar/tamu) yang masuk langsung tiba di layar panggilan LAFEX: tanpa memilih menu."""
+	"""Pilihan 'HOME_LANGSUNG_BICARA' (bawaan MATI): pelajar/tamu dialihkan langsung ke /video-call/."""
 
 	@classmethod
 	def setUpTestData(cls):
 		call_command('seed_awal', verbosity=0)
-		call_command('seed_level1', verbosity=0)
 
-	def test_pelajar_dan_tamu_langsung_ke_panggilan(self):
+	def test_bawaan_mati_siswa_tetap_punya_halaman_siswa(self):
+		self.assertFalse(settings.HOME_LANGSUNG_BICARA)
 		self.client.force_login(user_grup('p', 'pelajar'))
-		r = self.client.get('/')
-		self.assertRedirects(r, '/video-call/', fetch_redirect_response=False)
-		self.client.logout()
-		self.client.post('/tamu/')                                           # "Lanjut tanpa daftar"
-		self.client.post('/users/peran/', {'peran': 'ibu_pasar'})
-		self.assertRedirects(self.client.get('/'), '/video-call/', fetch_redirect_response=False)
-		self.assertEqual(self.client.get('/video-call/').status_code, 200)
+		self.assertEqual(self.client.get('/').status_code, 200)
 
-	def test_kontributor_dan_admin_tetap_punya_beranda_menu(self):
+	@override_settings(HOME_LANGSUNG_BICARA=True)
+	def test_bila_dinyalakan_pelajar_dialihkan_dan_kontributor_admin_tidak(self):
+		self.client.force_login(user_grup('p2', 'pelajar'))
+		self.assertRedirects(self.client.get('/'), '/video-call/', fetch_redirect_response=False)
 		for grup in ('kontributor', 'admin'):
 			self.client.force_login(user_grup(f'u-{grup}', grup))
 			self.assertEqual(self.client.get('/').status_code, 200, grup)
 
-	@override_settings(HOME_LANGSUNG_BICARA=False)
-	def test_bisa_dimatikan(self):
-		self.client.force_login(user_grup('p2', 'pelajar'))
-		self.assertEqual(self.client.get('/').status_code, 200)
 
-	def test_layar_panggilan_pelajar_satu_halaman_tanpa_kembali(self):
-		self.client.force_login(user_grup('p3', 'pelajar'))
-		html = self.client.get('/video-call/').content.decode()
-		self.assertIn('data-langsung="1"', html)
-		self.assertNotIn('id="kembali"', html)                               # tidak ada "kembali ke beranda": inilah berandanya
-		for kunci in ('id="pil-bahasa"', 'id="pil-topik"', 'data-menit="3"', 'data-mode="pintar"', 'id="mulai"'):
-			self.assertIn(kunci, html)                                       # semua pilihan ada di satu layar
-		for url in ('/belajar/', '/users/account/', '/users/ajukan/', '/logout/'):
-			self.assertIn(f'href="{url}"' if url != '/logout/' else f'action="{url}"', html)    # menu kecil di halaman yang sama
-		self.assertIn('data-topik="', html)                                  # topik dari level
-		self.assertIn('Sai kontributór', html)
+class LayarVideoCall(TestCase):
+	"""Layar Video Call: tanpa pilihan apa pun; hanya status, subtitle, dan 3 tombol."""
 
-	def test_tamu_tidak_melihat_ajukan_kontributor_dan_halaman_lain_tetap_punya_kembali(self):
-		self.client.post('/tamu/')
-		self.client.post('/users/peran/', {'peran': 'anak'})
-		self.assertNotIn('/users/ajukan/', self.client.get('/video-call/').content.decode())
-		self.client.logout()
-		self.client.force_login(user_grup('k', 'kontributor'))
-		html = self.client.get('/video-call/').content.decode()
-		self.assertIn('data-langsung="0"', html)
-		self.assertIn('id="kembali"', html)
+	@classmethod
+	def setUpTestData(cls):
+		call_command('seed_awal', verbosity=0)
+
+	def setUp(self):
+		self.client.force_login(user_grup('p', 'pelajar'))
+		self.html = self.client.get('/video-call/?mode=pintar&bahasa=tetun&topik=bebas').content.decode()
+
+	def test_semua_pilihan_dan_input_ketik_dihapus(self):
+		for terlarang in ('id="pil-bahasa"', 'id="pil-topik"', 'data-menit', 'vc-menit', 'id="mulai"', 'MULAI PANGGILAN', 'id="input"', 'id="form"',
+		                  'data-mode=', 'type="text"', 'MODE DEMO', 'id="lapis-awal"', 'Telefone fali', 'maskot', 'lafaek.svg', 'aksesori'):
+			self.assertNotIn(terlarang, self.html, terlarang)
+
+	def test_hanya_tiga_tombol_bawah(self):
+		bawah = self.html[self.html.index('class="vc-kontrol"'):self.html.index('<script>')]
+		self.assertEqual(sorted(re.findall(r'id="(\w+)"', bawah)), ['mik', 'tutup', 'ulangi'])
+		self.assertEqual(bawah.count('<button'), 3)
+
+	def test_unsur_wajib(self):
+		for kunci in ('id="menu-buka"', 'id="waktu"', 'id="poin"', 'id="lafex-img"', 'id="status"', 'id="baris-siswa"', 'id="baris-lafex"', 'id="koreksi"',
+		              "Hakarak hapara?", 'id="ya"', 'id="belum"', 'id="coba-lagi"', 'Tekan Izinkan Mikrofon di atas', "Bondia! Mai ko'alia!",
+		              "LAFEX Lagi Ngomong...", "LAFEX Lagi Dengerin... Ko'alia took!", "LAFEX Lagi Mikir...", "LAFEX Siap",
+		              "Hau la rona ho diak, bele ko'alia fali?", 'data-img="/static/img/lafex/"', 'data-chat="/api/lafex-chat/"'):
+			self.assertIn(kunci, self.html, kunci)
+
+	def test_gambar_hanya_dua_belas_png_milik_pengguna(self):
+		nama = ('preman', 'pintar', 'pro')
+		for n in nama:
+			for pose in ('diam', 'ngomong', 'jempol', 'mikir'):
+				self.assertIn(f'"{n}_{pose}.png"', self.html)
+		self.assertNotIn('http://', self.html.split('<script>')[1])
+		self.assertNotIn('https://', self.html.split('<script>')[1])                # tidak ada gambar/sumber dari internet
+
+	def test_pengenalan_suara_sesuai_aturan(self):
+		js = self.html.split('<script>')[1]
+		for kunci in ('r.continuous = false', 'r.interimResults = true', 'JEDA_MS = 2000', 'u.pitch = 1.0', 'hurufAngka(teks) < 3'):
+			self.assertIn(kunci, js, kunci)
+
+	def test_demo_hanya_pojok_kecil(self):
+		from django.test import override_settings as os_
+		self.assertIn('class="vc-demo">demo<', self.html)                               # backend demo: lencana kecil, bukan kalimat di tengah layar
+		with os_(AI={**settings.AI, 'BACKEND': 'local'}):
+			self.assertNotIn('class="vc-demo"', self.client.get('/video-call/').content.decode())

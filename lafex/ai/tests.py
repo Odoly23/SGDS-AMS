@@ -337,7 +337,7 @@ class PanggilanVideo(Dasar):
 
 	def test_halaman_terbuka_dan_dibatasi_login(self):
 		r = self.client.get('/video-call/?mode=pintar')
-		self.assertContains(r, 'MULAI PANGGILAN')
+		self.assertContains(r, 'id="mik"')
 		self.assertContains(r, 'data-chat="/api/lafex-chat/"')
 		self.assertIn('csrftoken', r.cookies)                                    # cookie CSRF untuk fetch POST
 		self.client.logout()
