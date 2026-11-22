@@ -268,7 +268,7 @@ class LayarVideoCall(TestCase):
 
 	def test_unsur_wajib(self):
 		for kunci in ('id="menu-buka"', 'id="waktu"', 'id="poin"', 'id="lafex-img"', 'id="status"', 'id="baris-siswa"', 'id="baris-lafex"', 'id="koreksi"',
-		              "Hakarak hapara?", 'id="ya"', 'id="belum"', 'id="coba-lagi"', 'Tekan Izinkan Mikrofon di atas', "Bondia! Mai ko'alia!",
+		              "Hakarak hapara?", 'id="ya"', 'id="belum"', 'id="coba-lagi"', 'Tekan Izinkan Mikrofon di atas', "BOMDIA PRESIJA, MAUN LAFEX PREMAN BONITU AJUDA! {NAMA}! Oinsa? Mai ko'alia!",
 		              "LAFEX Lagi Ngomong...", "LAFEX Lagi Dengerin... Ko'alia took!", "LAFEX Lagi Mikir...", "LAFEX Siap",
 		              "Hau la rona ho diak, bele ko'alia fali?", 'data-img="/static/img/lafex/"', 'data-chat="/api/lafex-chat/"'):
 			self.assertIn(kunci, self.html, kunci)
@@ -348,3 +348,61 @@ class BatasPerIP(TestCase):
 		self.assertEqual([daftar(i).status_code for i in range(3)], [302, 302, 302])
 		self.assertEqual(User.objects.filter(username__startswith='orang').count(), 2)     # yang ke-3 ditolak
 		self.assertContains(self.client.get('/users/register/', follow=True), 'Too many sign-ups')
+
+
+class SapaanNama(TestCase):
+	"""Sapaan awal Video Call memakai NAMA user yang login (dari server), dengan teks PERSIS per mode."""
+
+	@classmethod
+	def setUpTestData(cls):
+		call_command('seed_awal', verbosity=0)
+
+	def _halaman(self, user, url='/video-call/?mode=pintar'):
+		self.client.force_login(user)
+		return self.client.get(url).content.decode()
+
+	def test_nama_tampil_dari_first_name_email_dan_bawaan_kosong(self):
+		from config.user_utils import nama_tampil
+		u = lambda **kw: User(username=kw.pop('username', 'x'), **kw)
+		self.assertEqual(nama_tampil(u(first_name='vicente sousa')), 'Vicente')                  # first_name menang, hanya kata pertama
+		self.assertEqual(nama_tampil(u(first_name='  ', email='vicente.sousa@gmail.com')), 'Vicente')
+		self.assertEqual(nama_tampil(u(email='ana_maria99@x.com')), 'Ana')
+		self.assertEqual(nama_tampil(u(email='joao123@x.com')), 'Joao')
+		for tanpa_nama in ('info@x.com', 'admin@x.com', '12345@x.com', 'a@x.com', '', 'bukan-email'):
+			self.assertEqual(nama_tampil(u(email=tanpa_nama)), '', tanpa_nama)                    # peran/angka/terlalu pendek: bukan nama
+		self.assertEqual(nama_tampil(u(first_name='x' * 80)), 'X' + 'x' * 29)                     # dibatasi 30 huruf
+		from django.contrib.auth.models import AnonymousUser
+		self.assertEqual(nama_tampil(AnonymousUser()), '')
+
+	def test_halaman_membawa_nama_yang_login_bukan_nama_contoh(self):
+		self.assertIn('data-nama=""', self._halaman(user_grup('polos', 'pelajar')))              # tanpa nama/email: kosong (halaman memakai localStorage lalu "Maun / Mana")
+		u = user_grup('vic', 'pelajar'); u.first_name = 'Vicente'; u.save()
+		self.assertIn('data-nama="Vicente"', self._halaman(u))
+		u2 = user_grup('mar', 'pelajar'); u2.email = 'maria.da@x.com'; u2.save()
+		self.assertIn('data-nama="Maria"', self._halaman(u2))
+		u3 = user_grup('peran', 'pelajar'); u3.email = 'info@x.com'; u3.save()
+		self.assertIn('data-nama=""', self._halaman(u3))                                         # alamat layanan bukan nama orang
+		self.client.logout()
+		self.client.post('/tamu/')                                                               # akun tamu: tanpa nama
+		self.client.post('/users/peran/', {'peran': 'anak'})
+		self.assertIn('data-nama=""', self.client.get('/video-call/').content.decode())
+
+	def test_nama_di_halaman_di_escape(self):
+		u = user_grup('xss', 'pelajar'); u.first_name = '"><script>alert(1)</script>'; u.save()
+		html = self._halaman(u)
+		self.assertNotIn('<script>alert(1)', html.split('<script>')[0])
+		self.assertIn('data-nama="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"', html)
+
+	def test_teks_sapaan_persis_per_mode_dan_aturan_teknis(self):
+		js = self._halaman(user_grup('s1', 'pelajar')).split('<script>')[1]
+		for kalimat in ('preman:       "BOMDIA PRESIJA, MAUN LAFEX PREMAN BONITU AJUDA! {NAMA}! Oinsa? Mai ko\'alia!"',
+		                'pintar:       "BOMDIA PRESIJA, MAUN LAFEX AJUDA! {NAMA}! Mai aprende hamutuk!"',
+		                'professional: "BOMDIA, MAUN LAFEX PREMAN BONITU AJUDA Sr./a {NAMA}! Diak ka lae? Mai ko\'alia ho profesional."'.replace("\\'", "'")):
+			self.assertIn(kalimat.replace("\\'", "'"), js, kalimat)
+		for kunci in ('NAMA_BAWAAN = "Maun / Mana"', 'JEDA_SAPA_MS = 1000', 'var namaUser = ambilNama()', 'sudahMenyapa', '"user_nama", "nama", "username"',
+		              'ucapkan(teks, "tetun", 1.0, ucap)', 'u.pitch = 1.0', '"Diak tebes, " + namaUser', 'setTimeout(function () { sapa(false); }, JEDA_SAPA_MS)'):
+			self.assertIn(kunci, js, kunci)
+		self.assertNotIn('Vicente', js)                                                              # nama contoh tidak ada di kode
+		badan = [b for b in js.splitlines() if 'JSON.stringify({ pesan' in b]
+		self.assertEqual(len(badan), 1)
+		self.assertNotIn('nama', badan[0].lower())                                                   # nama TIDAK dikirim ke backend/AI

@@ -18,7 +18,7 @@ from ai import llm, suara
 from ai.models import Giliran
 from config.decorators import allowed_users
 from config.utils import lewat_batas_ip
-from config.user_utils import GRUP_ADMIN, SEMUA_GRUP, nama_grup
+from config.user_utils import GRUP_ADMIN, SEMUA_GRUP, nama_grup, nama_tampil
 from custom.models import KarakterAI
 from users.models import Perfil
 
@@ -126,6 +126,7 @@ def VideoCall(request):
 	(?mode=preman&bahasa=tetun&topik=bebas). Mikrofon menyala otomatis."""
 	return render(request, 'ai/video_call.html', {
 		'maks_teks': settings.AI['MAKS_TEKS'], 'demo': settings.AI['BACKEND'] == 'dummy', 'xtts': suara.tts_siap(),
+		'nama_user': nama_tampil(request.user),                         # untuk sapaan; '' bila belum ada nama (halaman memakai localStorage lalu "Maun / Mana")
 	})
 
 

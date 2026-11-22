@@ -6,12 +6,24 @@
 <a href="/video-call/?mode=preman&bahasa=tetun&topik=bebas">Bicara dengan LAFEX</a>
 ```
    `mode`: `preman` | `pintar` | `professional` (atau `pro`); `bahasa`: `tetun` | `portugues` | `inggris` | `indonesia`; `topik`: teks pendek. Tanpa parameter: preman, tetun, bebas.
-2. Video Call langsung terbuka: LAFEX besar, LAFEX menyapa **"Bondia! Mai ko'alia!"**, mikrofon menyala sendiri. Siswa tinggal bicara.
+2. Video Call langsung terbuka: LAFEX besar. **1 detik** kemudian LAFEX menyapa dengan **nama user yang login** (sekali saja, di awal), mikrofon menyala sendiri setelah sapaan. Siswa tinggal bicara. Teks sapaan per mode (hanya nama yang berganti, huruf besar):
+   - PREMAN: `BOMDIA PRESIJA, MAUN LAFEX PREMAN BONITU AJUDA! {NAMA}! Oinsa? Mai ko'alia!`
+   - PINTAR (Matenek): `BOMDIA PRESIJA, MAUN LAFEX AJUDA! {NAMA}! Mai aprende hamutuk!`
+   - PROFESSIONAL: `BOMDIA, MAUN LAFEX PREMAN BONITU AJUDA Sr./a {NAMA}! Diak ka lae? Mai ko'alia ho profesional.`
+   Gambar: `diam` -> `ngomong`/`diam` tiap 180 ms saat bicara -> `jempol` 2 detik setelah sapaan. Suara: pitch 1.0, rate 1.0; teks tampil di subtitle persis, sedangkan untuk suara "Sr./a" dibacakan "senhor ou senhora".
 3. LAFEX mendengarkan sampai siswa diam **2 detik** (omongan tidak dipotong walau mesin pengenalan suara berhenti sendiri di tengah), baru menjawab.
 4. Jawaban benar -> gambar jempol 2 detik. Ada koreksi tata bahasa -> tampil di bawah jawaban.
 5. 📞 Tutup -> konfirmasi **"Hakarak hapara? / Mau berhenti?" [Ya] [Belum]** -> kembali ke halaman Siswa.
 
 Mengganti mode/bahasa/topik hanya bisa di halaman Siswa, bukan di layar ini (supaya anak tidak salah pencet).
+
+## Nama untuk sapaan
+Aplikasi ini belum punya kolom nama sendiri (username = email/HP; tamu = `tamu-xxxx`), dan tidak ada `/api/user`. Nama dibaca **di server** (`config/user_utils.nama_tampil`) dan tertulis di halaman (`data-nama`), jadi tidak ada penantian. Urutan:
+1. `first_name` user (bisa diisi admin di admin Django), kata pertama;
+2. bagian depan email yang berbentuk nama (`vicente.sousa@x.com` -> Vicente; `info@`, `admin@`, angka, atau terlalu pendek diabaikan). **Ini tebakan**: `polos@x.com` akan jadi "Polos";
+3. localStorage `user_nama` / `nama` / `username` (bila ada; aplikasi ini sendiri tidak mengisinya);
+4. `Maun / Mana`.
+Tamu dan akun HP tidak punya nama, jadi mendapat "Maun / Mana". Nama disimpan di `namaUser` dan dipakai lagi untuk pujian "Diak tebes, NAMA!" pada jawaban benar ke-1, ke-4, ke-7, ... (tidak setiap kali). **Nama tidak pernah dikirim ke backend/AI.**
 
 ## Isi layar (tidak ada yang lain)
 - Atas: `[☰] [Timer] [Poin]` dan teks kecil tidak bisa diklik: `Tetun • Bebas • PREMAN`. Timer menghitung maju (tidak ada durasi/batas waktu; pelindung biaya adalah jatah harian di server).

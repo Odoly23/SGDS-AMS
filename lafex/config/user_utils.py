@@ -49,3 +49,28 @@ def buat_user(kontak, password, grup=GRUP_PELAJAR):
 	user.groups.add(pastikan_grup()[grup])
 	Perfil.objects.create(user=user, telepon=nilai if jenis == 'telepon' else None)
 	return user
+
+
+# Bagian depan email yang bukan nama orang (alamat peran/layanan)
+_BUKAN_NAMA = {'info', 'admin', 'user', 'users', 'test', 'tes', 'mail', 'email', 'contact', 'kontak', 'support', 'noreply', 'no', 'hello', 'halo',
+               'siswa', 'murid', 'guru', 'akun', 'tamu', 'demo', 'lafex'}
+
+
+def nama_tampil(user):
+	"""
+	Nama untuk sapaan di layar Video Call (ditampilkan di layar pengguna itu sendiri; TIDAK dikirim ke model AI).
+	Urutan: first_name -> bagian depan email yang berbentuk nama (mis. 'vicente.sousa@x.com' -> 'Vicente') -> '' (tamu, akun HP, atau email tanpa nama).
+	Aplikasi ini belum punya kolom nama sendiri; first_name bisa diisi admin di admin Django.
+	"""
+	if not getattr(user, 'is_authenticated', False):
+		return ''
+	nama = (user.first_name or '').strip().split(' ')[0] if (user.first_name or '').strip() else ''
+	if not nama:
+		email = (user.email or '').strip()
+		if '@' in email:
+			depan = email.split('@')[0]
+			for bagian in re.split(r'[._\-+0-9]+', depan):
+				if len(bagian) >= 2 and bagian.isalpha() and bagian.lower() not in _BUKAN_NAMA:
+					nama = bagian
+					break
+	return nama[:30].capitalize() if nama else ''

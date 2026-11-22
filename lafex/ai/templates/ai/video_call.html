@@ -73,7 +73,7 @@
 </style>
 </head>
 <body data-chat="{% url 'lafex-chat' %}" data-img="{% static 'img/lafex/' %}" data-siswa="{% url 'home' %}"
-      data-demo="{% if demo %}1{% else %}0{% endif %}" data-xtts="{% if xtts %}1{% else %}0{% endif %}" data-tts="{% url 'ai-tts' %}" data-maks-teks="{{ maks_teks }}">
+      data-nama="{{ nama_user }}" data-demo="{% if demo %}1{% else %}0{% endif %}" data-xtts="{% if xtts %}1{% else %}0{% endif %}" data-tts="{% url 'ai-tts' %}" data-maks-teks="{{ maks_teks }}">
 <div class="vc">
 	<div class="topbar" aria-hidden="true"></div>
 
@@ -166,7 +166,14 @@
 	var ALIAS_BAHASA = { tet: "tetun", pt: "portugues", portugis: "portugues", portuguese: "portugues", en: "inggris", english: "inggris", id: "indonesia", indonesian: "indonesia" };
 	var ALIAS_MODE = { pro: "professional", profesional: "professional", formal: "professional" };
 
-	var SAPAAN = { tetun: "Bondia! Mai ko'alia!", portugues: "Bom dia! Vamos conversar!", inggris: "Good morning! Let's talk!", indonesia: "Selamat pagi! Ayo bicara!" };
+	// Sapaan awal per mode: teks PERSIS, hanya {NAMA} yang diganti (nama pengguna yang login, huruf besar).
+	var SAPAAN = {
+		preman:       "BOMDIA PRESIJA, MAUN LAFEX PREMAN BONITU AJUDA! {NAMA}! Oinsa? Mai ko'alia!",
+		pintar:       "BOMDIA PRESIJA, MAUN LAFEX AJUDA! {NAMA}! Mai aprende hamutuk!",
+		professional: "BOMDIA, MAUN LAFEX PREMAN BONITU AJUDA Sr./a {NAMA}! Diak ka lae? Mai ko'alia ho profesional."
+	};
+	var NAMA_BAWAAN = "Maun / Mana";                       // bila nama tidak ketemu
+	var JEDA_SAPA_MS = 1000;                               // sapaan muncul 1 detik setelah halaman dibuka
 	var TIDAK_JELAS = { tetun: "Hau la rona ho diak, bele ko'alia fali?", portugues: "Não ouvi bem, pode falar outra vez?", inggris: "I didn't hear well, can you say it again?", indonesia: "Aku kurang dengar, bisa bicara lagi?" };
 	var STATUS = {
 		ngomong: "LAFEX Lagi Ngomong...", dengar: "LAFEX Lagi Dengerin... Ko'alia took!", mikir: "LAFEX Lagi Mikir...", siap: "LAFEX Siap"
@@ -193,13 +200,28 @@
 	var bahasa = getURLParam("bahasa", "tetun").toLowerCase(); bahasa = ALIAS_BAHASA[bahasa] || bahasa; if (!BAHASA[bahasa]) bahasa = "tetun";
 	var topik = getURLParam("topik", "bebas").slice(0, 40).replace(/[^\w\- ]/g, "") || "bebas";
 
+	// Nama pengguna yang login: dari server (sudah tertulis di halaman, tanpa menunggu), lalu localStorage, lalu "Maun / Mana".
+	function ambilNama() {
+		var n = (B.nama || "").trim();
+		if (!n) {
+			["user_nama", "nama", "username"].some(function (k) {
+				try { var v = (localStorage.getItem(k) || "").trim(); if (v) { n = v.split("@")[0]; return true; } } catch (e) { /* abaikan */ }
+				return false;
+			});
+		}
+		n = n.replace(/[<>\u0000-\u001f]/g, "").replace(/\s+/g, " ").trim().slice(0, 30);
+		return n || NAMA_BAWAAN;
+	}
+	var namaUser = ambilNama();                           // dipakai lagi untuk sapaan berikutnya (mis. "Diak tebes, ...!"); TIDAK dikirim ke backend/AI
+	var sudahMenyapa = false, jumlahBenar = 0;
+
 	var poin = 0;
 	try { poin = parseInt(localStorage.getItem("lafex_vc_poin"), 10) || 0; } catch (e) { /* abaikan */ }
 
 	var status = "siap", fase = "jalan";                 // fase: jalan | selesai (jatah habis)
 	var sibuk = false;                                    // LAFEX sedang memproses / bicara (mikrofon tidak boleh mendengar)
 	var micAktif = true, izinDitolak = false;
-	var terakhir = "", terakhirBahasa = "tetun";          // jawaban terakhir LAFEX (untuk tombol Ulangi)
+	var terakhir = "", terakhirBahasa = "tetun", terakhirSuara = "";          // jawaban terakhir LAFEX (untuk tombol Ulangi)
 	var mulutTimer = null, mulutBuka = false, jempolAktif = false, jempolTimer = null;
 	var mulaiAt = Date.now(), wake = null, aksiYa = null;
 
@@ -257,21 +279,21 @@
 	}
 
 	// Ucapkan teks sambil menggerakkan mulut. Promise selesai SATU kali dengan true bila browser MEMBLOKIR suara (butuh sentuhan pengguna).
-	function ucapkan(teks, kodeBahasa) {
+	function ucapkan(teks, kodeBahasa, laju, teksSuara) {          // laju: kecepatan (bawaan 0.95); teksSuara: versi untuk dibacakan bila beda dari yang tampil
 		berhentiBicara(); setStatus("ngomong");
 		return new Promise(function (selesai) {
 			var usai = false, bunyi = false, pengaman = null, cekMulai = null;
 			function akhir(blok) { if (usai) return; usai = true; clearTimeout(pengaman); clearTimeout(cekMulai); hentiMulut(); selesai(!!blok); }
-			var perkiraan = Math.max(2500, teks.length * 95);
+			var ucap = teksSuara || teks, perkiraan = Math.max(2500, ucap.length * 95);
 			var xtts = B.xtts === "1" && (kodeBahasa || bahasa) === "tetun";
 			pengaman = setTimeout(function () { berhentiBicara(); akhir(false); }, perkiraan + (xtts ? 20000 : 6000));   // beberapa browser tidak memanggil onend
 
 			function bicaraBrowser() {
 				if (usai) return;
 				if (!TTS) { mulaiMulut(); clearTimeout(pengaman); pengaman = setTimeout(function () { akhir(false); }, perkiraan); return; }
-				var u = new SpeechSynthesisUtterance(teks), kode = BAHASA[kodeBahasa || bahasa].suara;
+				var u = new SpeechSynthesisUtterance(ucap), kode = BAHASA[kodeBahasa || bahasa].suara;
 				u.lang = kode; var v = pilihSuara(kode); if (v) u.voice = v;
-				u.pitch = 1.0; u.rate = 0.95; u.volume = 1.0;            // suara guru yang jelas: pitch normal, tidak cempreng
+				u.pitch = 1.0; u.rate = laju || 0.95; u.volume = 1.0;            // suara guru yang jelas: pitch normal, tidak cempreng
 				u.onstart = function () { bunyi = true; clearTimeout(cekMulai); mulaiMulut(); };
 				u.onend = function () { akhir(false); };
 				u.onerror = function (e) { akhir(!!e && e.error === "not-allowed"); };
@@ -279,7 +301,7 @@
 				window.speechSynthesis.speak(u);
 			}
 			if (!xtts) { bicaraBrowser(); return; }
-			fetch(B.tts, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ teks: teks.slice(0, 300) }) })
+			fetch(B.tts, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie("csrftoken") }, body: JSON.stringify({ teks: ucap.slice(0, 300) }) })
 				.then(function (r) { if (!r.ok) throw new Error("tts"); return r.blob(); })
 				.then(function (blob) {
 					if (usai) return;
@@ -377,10 +399,15 @@
 	function tanggapi(d) {                                // jawaban LAFEX + koreksi; benar -> jempol 2 detik
 		if (fase !== "jalan") return Promise.resolve();
 		if (d && d.ok && d.jawaban) {
-			var benar = d.benar === true; terakhir = d.jawaban; terakhirBahasa = "tetun";
-			tulisLafex(d.jawaban, d.koreksi);
+			var benar = d.benar === true, jawaban = d.jawaban;
+			if (benar) {                                    // pujian dengan nama: pada jawaban benar ke-1, ke-4, ke-7, ... (tidak setiap kali, agar tidak membosankan)
+				if (jumlahBenar % 3 === 0) jawaban = "Diak tebes, " + namaUser + "! " + jawaban;
+				jumlahBenar++;
+			}
+			terakhir = jawaban; terakhirBahasa = "tetun"; terakhirSuara = "";
+			tulisLafex(jawaban, d.koreksi);
 			if (benar) tambahPoin(10);
-			return ucapkan(d.jawaban, "tetun").then(function () { if (benar) tampilkanJempol(); });
+			return ucapkan(jawaban, "tetun").then(function () { if (benar) tampilkanJempol(); });
 		}
 		setStatus("siap");
 		var kode = d && d.kode;
@@ -393,11 +420,18 @@
 	function tahanLayar() { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (w) { wake = w; }, function () { /* abaikan */ }); } catch (e) { /* abaikan */ } }
 	function lepasLayar() { try { if (wake) wake.release(); } catch (e) { /* abaikan */ } wake = null; }
 
-	function sapa(dariKetuk) {                            // LAFEX menyapa, lalu mikrofon menyala sendiri
-		sibuk = true; tulisLafex(SAPAAN[bahasa], ""); terakhir = SAPAAN[bahasa]; terakhirBahasa = bahasa;
-		ucapkan(SAPAAN[bahasa], bahasa).then(function (diblokir) {
+	function teksSapaan() { return SAPAAN[mode].replace("{NAMA}", namaUser.toUpperCase()); }
+	function sapa(dariKetuk) {                            // sapaan awal SATU kali: LAFEX menyebut nama pengguna, lalu mikrofon menyala sendiri
+		if (sudahMenyapa) { dengar(); return; }
+		sudahMenyapa = true;
+		var teks = teksSapaan();
+		// Untuk suara, "Sr./a" dibacakan "senhor ou senhora" (mesin suara akan mengeja garis miring); yang tampil di subtitle tetap persis.
+		var ucap = teks.replace("Sr./a", "senhor ou senhora").toLowerCase();
+		sibuk = true; tulisLafex(teks, ""); terakhir = teks; terakhirBahasa = "tetun"; terakhirSuara = ucap;
+		ucapkan(teks, "tetun", 1.0, ucap).then(function (diblokir) {
 			sibuk = false; setStatus("siap");
-			if (diblokir && !dariKetuk) { lapis("lapis-ketuk", true); return; }     // browser butuh satu sentuhan: tampilkan ajakan menekan layar
+			if (diblokir && !dariKetuk) { sudahMenyapa = false; lapis("lapis-ketuk", true); return; }     // browser butuh satu sentuhan: sapaan diulang SEKALI setelah ditekan
+			if (!diblokir) tampilkanJempol();               // selesai menyapa: gambar jempol 2 detik
 			dengar();
 		});
 	}
@@ -435,7 +469,7 @@
 	$("ulangi").addEventListener("click", function () {
 		if (!terakhir || sibuk || fase === "selesai") return;
 		sibuk = true; hentiDengar(); bersihUcapan();
-		ucapkan(terakhir, terakhirBahasa).then(function () { sibuk = false; setStatus("siap"); dengar(); });
+		ucapkan(terakhir, terakhirBahasa, null, terakhirSuara || null).then(function () { sibuk = false; setStatus("siap"); dengar(); });
 	});
 	$("coba-lagi").addEventListener("click", function () { lapis("lapis-izin", false); izinDitolak = false; ulangDengar = 0; dengar(); });
 	$("ketuk").addEventListener("click", function () {     // satu sentuhan: buka kunci suara, lalu mulai seperti biasa
@@ -455,7 +489,9 @@
 	Object.keys(GAMBAR[mode]).forEach(function (p) { new Image().src = url(p); });        // muat awal supaya ganti gambar mulus
 	var timerWaktu = setInterval(function () { $("waktu").textContent = mmss((Date.now() - mulaiAt) / 1000); }, 500);
 	tahanLayar();
-	sapa(false);                                          // langsung: LAFEX menyapa, mikrofon menyala, siswa tinggal bicara
+	// Minta izin mikrofon SEKARANG (kotak izin muncul saat sapaan berlangsung), lalu langsung dilepas: pengenalan suara menyala sendiri setelah sapaan.
+	try { if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) navigator.mediaDevices.getUserMedia({ audio: true }).then(function (st) { st.getTracks().forEach(function (t) { t.stop(); }); }, function () { /* ditangani saat pengenalan suara mulai */ }); } catch (e) { /* abaikan */ }
+	setTimeout(function () { sapa(false); }, JEDA_SAPA_MS);   // 1 detik setelah halaman dibuka: LAFEX menyapa dengan nama, lalu mikrofon menyala, siswa tinggal bicara
 })();
 </script>
 </body>
