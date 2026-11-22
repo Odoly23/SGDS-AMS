@@ -18,12 +18,12 @@
 Mengganti mode/bahasa/topik hanya bisa di halaman Siswa, bukan di layar ini (supaya anak tidak salah pencet).
 
 ## Nama untuk sapaan
-Aplikasi ini belum punya kolom nama sendiri (username = email/HP; tamu = `tamu-xxxx`), dan tidak ada `/api/user`. Nama dibaca **di server** (`config/user_utils.nama_tampil`) dan tertulis di halaman (`data-nama`), jadi tidak ada penantian. Urutan:
-1. `first_name` user (bisa diisi admin di admin Django), kata pertama;
-2. bagian depan email yang berbentuk nama (`vicente.sousa@x.com` -> Vicente; `info@`, `admin@`, angka, atau terlalu pendek diabaikan). **Ini tebakan**: `polos@x.com` akan jadi "Polos";
-3. localStorage `user_nama` / `nama` / `username` (bila ada; aplikasi ini sendiri tidak mengisinya);
-4. `Maun / Mana`.
-Tamu dan akun HP tidak punya nama, jadi mendapat "Maun / Mana". Nama disimpan di `namaUser` dan dipakai lagi untuk pujian "Diak tebes, NAMA!" pada jawaban benar ke-1, ke-4, ke-7, ... (tidak setiap kali). **Nama tidak pernah dikirim ke backend/AI.**
+Nama ada di kolom **Naran**: di form daftar (opsional) dan di halaman **Akun** (bisa diubah kapan saja, juga oleh akun tamu). Disimpan di `first_name` dan `last_name` **terpisah** (kata pertama = `first_name`, sisanya = `last_name`; "maria da costa" -> Maria / da Costa). Aturan:
+- Daftar **dengan email dan Naran dikosongkan**: dibuat otomatis dari email (`vicente.sousa@x.com` -> Vicente / Sousa; `ana_maria99@x.com` -> Ana / Maria). Alamat layanan (`info@`, `admin@`), angka, atau kata terlalu pendek tidak dianggap nama. **Ini tebakan**; pengguna bisa memperbaikinya di Akun.
+- Daftar dengan **HP**: tanpa nama otomatis (nomor HP tidak memuat nama); mengisi Naran tetap bisa.
+- Validasi: huruf (boleh beraksen), spasi, apostrof, titik, tanda hubung; 2-60 karakter; tanpa angka/simbol.
+- Akun lama yang belum punya nama: sapaan memakai tebakan dari email, tanpa menyimpan apa pun.
+Nama dibaca **di server** (`config/user_utils.nama_tampil`) dan tertulis di halaman (`data-nama`), jadi tanpa penantian. Urutan sapaan: `first_name` -> tebakan email -> localStorage `user_nama`/`nama`/`username` (bila ada) -> `Maun / Mana`. Nama disimpan di `namaUser` dan dipakai lagi untuk pujian "Diak tebes, NAMA!" pada jawaban benar ke-1, ke-4, ke-7, ... **Nama tidak pernah dikirim ke backend/AI.**
 
 ## Isi layar (tidak ada yang lain)
 - Atas: `[☰] [Timer] [Poin]` dan teks kecil tidak bisa diklik: `Tetun • Bebas • PREMAN`. Timer menghitung maju (tidak ada durasi/batas waktu; pelindung biaya adalah jatah harian di server).

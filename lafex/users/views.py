@@ -9,8 +9,8 @@ from django.views.decorators.http import require_POST
 
 from config.decorators import allowed_users, unauthenticated_user
 from config.utils import lewat_batas_ip
-from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, GRUP_PELAJAR, SEMUA_GRUP, buat_user, nama_grup, pastikan_grup
-from users.forms import DaftarForm
+from config.user_utils import isi_naran, naran_dari_email, GRUP_ADMIN, GRUP_KONTRIBUTOR, GRUP_PELAJAR, SEMUA_GRUP, buat_user, nama_grup, pastikan_grup
+from users.forms import DaftarForm, NaranForm
 from custom.models import Bahasa
 from django.http import Http404
 from django.utils import timezone
@@ -29,6 +29,10 @@ def Register(request):
 		form = DaftarForm(request.POST)
 		if form.is_valid():
 			user = buat_user(form.kontak_normal, form.cleaned_data['password1'])
+			jenis, nilai = form.kontak_normal
+			naran = form.cleaned_data['naran'] or (naran_dari_email(nilai) if jenis == 'email' else '')   # email tanpa nama diisi: dibuat dari email
+			if naran:
+				isi_naran(user, naran)                                  # first_name dan last_name terpisah
 			auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 			messages.success(request, 'msg_account_created')
 			return redirect('home')
@@ -57,7 +61,15 @@ def Peran(request):
 @allowed_users(allowed_roles=SEMUA_GRUP)
 def Account(request):
 	perfil, _ = Perfil.objects.get_or_create(user=request.user)
-	context = {'group': nama_grup(request.user), 'page': 'account', 'perfil': perfil, 'title': "Ha'u nia konta"}
+	if request.method == 'POST':
+		form = NaranForm(request.POST)
+		if form.is_valid():
+			isi_naran(request.user, form.cleaned_data['naran'])
+			messages.success(request, 'msg_name_saved')
+			return redirect('user-account')
+		messages.error(request, 'err_name_invalid')
+	naran = f'{request.user.first_name} {request.user.last_name}'.strip()
+	context = {'group': nama_grup(request.user), 'page': 'account', 'perfil': perfil, 'title': "Ha'u nia konta", 'naran': naran}
 	return render(request, 'auth/account.html', context)
 
 

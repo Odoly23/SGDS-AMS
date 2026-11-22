@@ -2,16 +2,24 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 
-from config.user_utils import normalisasi_kontak
+from config.user_utils import naran_valid, normalisasi_kontak, rapikan_naran
 from users.models import Perfil
 
 
 class DaftarForm(forms.Form):
 	"""Daftar dengan email ATAU nomor HP + kata sandi."""
+	naran = forms.CharField(max_length=80, required=False, label="Naran",
+							widget=forms.TextInput(attrs={'class': 'form-control form-control-lg', 'autocomplete': 'name', 'placeholder': 'Ex: Vicente Sousa'}))
 	kontak = forms.CharField(max_length=150, label="Email / Nu. Telefone",
 							 widget=forms.TextInput(attrs={'class': 'form-control form-control-lg', 'autocomplete': 'username', 'inputmode': 'email'}))
 	password1 = forms.CharField(label="Palavra-pase", widget=forms.PasswordInput(attrs={'class': 'form-control form-control-lg', 'autocomplete': 'new-password'}))
 	password2 = forms.CharField(label="Hakerek fali palavra-pase", widget=forms.PasswordInput(attrs={'class': 'form-control form-control-lg', 'autocomplete': 'new-password'}))
+
+	def clean_naran(self):
+		naran = ' '.join(self.cleaned_data.get('naran', '').split())
+		if naran and not naran_valid(naran):
+			raise forms.ValidationError('err_name_invalid')           # huruf/spasi saja, 2-60 karakter
+		return rapikan_naran(naran)
 
 	def clean_kontak(self):
 		try:
@@ -41,3 +49,14 @@ class PeranForm(forms.ModelForm):
 	class Meta:
 		model = Perfil
 		fields = ['peran']
+
+
+class NaranForm(forms.Form):
+	"""Ubah nama di halaman Akun (juga untuk akun tamu). Kosong = hapus nama."""
+	naran = forms.CharField(max_length=80, required=False, label="Naran")
+
+	def clean_naran(self):
+		naran = ' '.join(self.cleaned_data.get('naran', '').split())
+		if naran and not naran_valid(naran):
+			raise forms.ValidationError('err_name_invalid')
+		return rapikan_naran(naran)

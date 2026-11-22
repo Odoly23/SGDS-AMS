@@ -36,6 +36,13 @@ TEKS = {
     "mine_write": dict(tet="Hakerek saida mak ita dehan (iha ita nia lian)", en="Write what you said (in your language)", pt="Escreve o que disseste (na tua língua)", id="Tulis apa yang kamu ucapkan (dalam bahasamu)"),
     "mine_write_help": dict(tet="Ajuda AI aprende hakerek lian ne'e. Opsionál.", en="Helps the AI learn to write this language. Optional.", pt="Ajuda a IA a aprender a escrever esta língua. Opcional.", id="Membantu AI belajar menulis bahasa ini. Opsional."),
     "listen_example": dict(tet="Rona ezemplu", en="Hear example", pt="Ouvir exemplo", id="Dengar contoh"),
+    # Naran (nama)
+    "reg_naran_hint": dict(tet="Naran ita nian: opsionál. Se uza email no la hakerek, ami hamosu husi email.", en="Your name is optional. If you use an email and leave it empty, we make it from the email.", pt="O nome é opcional. Se usar email e deixar vazio, criamos a partir do email.", id="Nama boleh dikosongkan. Kalau pakai email dan dikosongkan, kami buat dari email."),
+    "account_naran": dict(tet="Naran", en="Name", pt="Nome", id="Nama"),
+    "account_naran_help": dict(tet="LAFEX sei salúta ita ho naran ne'e. Hakerek naran no apelidu (ex: Maria da Costa).", en="LAFEX greets you with this name. Write first and last name (e.g. Maria da Costa).", pt="O LAFEX cumprimenta-o com este nome. Escreva nome e apelido (ex.: Maria da Costa).", id="LAFEX menyapamu dengan nama ini. Tulis nama depan dan belakang (mis. Maria da Costa)."),
+    "account_naran_ph": dict(tet="Ex: Vicente Sousa", en="E.g. Vicente Sousa", pt="Ex.: Vicente Sousa", id="Mis. Vicente Sousa"),
+    "err_name_invalid": dict(tet="Naran ne'e la loos. Uza de'it letra no espasu (2-60 karakter).", en="That name is not valid. Use letters and spaces only (2-60 characters).", pt="Nome inválido. Use apenas letras e espaços (2-60 caracteres).", id="Nama tidak valid. Pakai huruf dan spasi saja (2-60 karakter)."),
+    "msg_name_saved": dict(tet="Naran rai ona.", en="Name saved.", pt="Nome guardado.", id="Nama tersimpan."),
     # ajukan jadi kontributor
     "apply_title": dict(tet="Sai kontributór", en="Become a contributor", pt="Tornar-se contribuinte", id="Jadi kontributor"),
     "apply_intro": dict(tet="Ita koalia lian rejionál? Ajuda AI aprende ho grava ita nia lian. Admin sei revee ita nia aplikasaun.", en="Do you speak a local language? Help the AI learn by recording your voice. An admin will review your request.", pt="Falas uma língua regional? Ajuda a IA a aprender gravando a tua voz. Um administrador vai rever o teu pedido.", id="Kamu bisa bahasa daerah? Bantu AI belajar dengan merekam suaramu. Admin akan meninjau pengajuanmu."),

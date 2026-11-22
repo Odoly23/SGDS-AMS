@@ -140,3 +140,112 @@ class AjukanKontributor(TestCase):
 		pg.refresh_from_db()
 		self.assertEqual(pg.status, 'ditolak')
 		self.assertEqual([g.name for g in self.p.groups.all()], ['pelajar'])
+
+
+class Naran(TestCase):
+	"""Kolom Naran di form daftar dan halaman Akun; email tanpa nama -> first_name & last_name dibuat otomatis, terpisah."""
+
+	@classmethod
+	def setUpTestData(cls):
+		call_command('seed_awal', verbosity=0)
+
+	def setUp(self):
+		cache.clear()
+
+	def _daftar(self, kontak, naran=None, ip='203.0.113.1'):
+		self.client.logout()
+		d = {'kontak': kontak, 'password1': 'rahasia123', 'password2': 'rahasia123'}
+		if naran is not None:
+			d['naran'] = naran
+		return self.client.post('/users/register/', d, REMOTE_ADDR=ip)
+
+	def test_helper_pisah_dan_rapikan(self):
+		from config.user_utils import naran_dari_email, naran_valid, pisah_naran, rapikan_naran
+		self.assertEqual(rapikan_naran('  vicente   SOUSA '), 'Vicente Sousa')
+		self.assertEqual(rapikan_naran('maria da costa'), 'Maria da Costa')
+		self.assertEqual(rapikan_naran('João McDonald'), 'João McDonald')                       # campur besar-kecil dibiarkan
+		self.assertEqual(pisah_naran('maria da costa'), ('Maria', 'da Costa'))                  # sisanya jadi last_name
+		self.assertEqual(pisah_naran('Ana'), ('Ana', ''))
+		self.assertEqual(pisah_naran(''), ('', ''))
+		self.assertEqual(naran_dari_email('vicente.sousa@gmail.com'), 'Vicente Sousa')
+		self.assertEqual(naran_dari_email('ana_maria99@x.com'), 'Ana Maria')
+		self.assertEqual(naran_dari_email('joao123@x.com'), 'Joao')
+		for bukan in ('info@x.com', 'admin.lafex@x.com', '12345@x.com', 'a@x.com', '+67077123456', ''):
+			self.assertEqual(naran_dari_email(bukan), '', bukan)
+		for ok in ("Maria da Costa", "D'Avila", "José-Maria", "Ana"):
+			self.assertTrue(naran_valid(ok), ok)
+		for jelek in ('A', 'x' * 61, 'Ana123', '<b>Ana</b>', 'Ana_Maria', '12', '-Ana', ''):
+			self.assertFalse(naran_valid(jelek), jelek)
+
+	def test_daftar_dengan_naran_diisi_pengguna(self):
+		self.assertEqual(self._daftar('maria@x.com', 'maria da costa').status_code, 302)
+		u = User.objects.get(username='maria@x.com')
+		self.assertEqual((u.first_name, u.last_name), ('Maria', 'da Costa'))                    # terpisah, bukan dari email
+
+	def test_daftar_email_tanpa_naran_dibuat_dari_email(self):
+		self._daftar('vicente.sousa@x.com', '')
+		u = User.objects.get(username='vicente.sousa@x.com')
+		self.assertEqual((u.first_name, u.last_name), ('Vicente', 'Sousa'))
+		self._daftar('ana_maria99@x.com')                                                       # kolom tidak dikirim sama sekali
+		u = User.objects.get(username='ana_maria99@x.com')
+		self.assertEqual((u.first_name, u.last_name), ('Ana', 'Maria'))
+		self._daftar('info@x.com', '')
+		u = User.objects.get(username='info@x.com')
+		self.assertEqual((u.first_name, u.last_name), ('', ''))                                 # bukan nama orang: dikosongkan
+
+	def test_daftar_dengan_hp_tanpa_naran_tidak_ada_nama(self):
+		self._daftar('77123456', '')
+		u = User.objects.get(username='+67077123456')
+		self.assertEqual((u.first_name, u.last_name), ('', ''))
+		self._daftar('77123457', 'Joaquina Lopes')                                              # HP + naran diisi: tersimpan
+		u = User.objects.get(username='+67077123457')
+		self.assertEqual((u.first_name, u.last_name), ('Joaquina', 'Lopes'))
+
+	def test_naran_tidak_valid_menggagalkan_daftar(self):
+		for jelek in ('<script>', 'Ana123', 'A'):
+			r = self._daftar(f'x{len(jelek)}@x.com', jelek)
+			self.assertEqual(r.status_code, 200, jelek)
+			self.assertContains(r, 'not valid')
+		self.assertFalse(User.objects.filter(username__startswith='x').exists())
+
+	def test_form_daftar_menampilkan_kolom_naran(self):
+		r = self.client.get('/users/register/')
+		self.assertContains(r, 'name="naran"')
+		self.assertContains(r, 'Your name is optional')
+
+	def test_akun_bisa_melihat_dan_mengubah_naran_termasuk_tamu(self):
+		u = user_grup('akun1', 'pelajar')
+		self.client.force_login(u)
+		self.assertContains(self.client.get('/users/account/'), 'name="naran"')
+		self.client.post('/users/account/', {'naran': 'vicente  sousa'})
+		u.refresh_from_db()
+		self.assertEqual((u.first_name, u.last_name), ('Vicente', 'Sousa'))
+		self.assertContains(self.client.get('/users/account/'), 'value="Vicente Sousa"')
+		self.client.post('/users/account/', {'naran': '<b>x'})                                  # tidak valid: tidak berubah
+		u.refresh_from_db()
+		self.assertEqual(u.first_name, 'Vicente')
+		self.client.post('/users/account/', {'naran': ''})                                      # kosong: nama dihapus
+		u.refresh_from_db()
+		self.assertEqual((u.first_name, u.last_name), ('', ''))
+		self.client.logout()
+		self.client.post('/tamu/')                                                              # akun tamu juga boleh mengisi nama
+		self.client.post('/users/peran/', {'peran': 'anak'})
+		self.client.post('/users/account/', {'naran': 'Tito'})
+		tamu = User.objects.get(username__startswith='tamu-')
+		self.assertEqual(tamu.first_name, 'Tito')
+
+	def test_naran_dipakai_sapaan_dan_di_escape(self):
+		u = user_grup('akun2', 'pelajar')
+		self.client.force_login(u)
+		self.client.post('/users/account/', {'naran': 'maria da costa'})
+		self.assertIn('data-nama="Maria"', self.client.get('/video-call/').content.decode())   # first_name -> sapaan
+		self.client.post('/users/account/', {'naran': 'Ana'})
+		self.assertContains(self.client.get('/users/account/'), 'value="Ana"')
+		self.assertEqual(self.client.get('/users/account/').status_code, 200)
+
+	def test_hanya_milik_sendiri(self):
+		a, b = user_grup('ua', 'pelajar'), user_grup('ub', 'pelajar')
+		self.client.force_login(a)
+		self.client.post('/users/account/', {'naran': 'Ana', 'user': b.pk, 'first_name': 'Curang'})
+		b.refresh_from_db(); a.refresh_from_db()
+		self.assertEqual((a.first_name, b.first_name), ('Ana', ''))

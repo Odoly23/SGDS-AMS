@@ -54,23 +54,66 @@ def buat_user(kontak, password, grup=GRUP_PELAJAR):
 # Bagian depan email yang bukan nama orang (alamat peran/layanan)
 _BUKAN_NAMA = {'info', 'admin', 'user', 'users', 'test', 'tes', 'mail', 'email', 'contact', 'kontak', 'support', 'noreply', 'no', 'hello', 'halo',
                'siswa', 'murid', 'guru', 'akun', 'tamu', 'demo', 'lafex'}
+# Kata penghubung dalam nama Timor/Portugis: ditulis huruf kecil bila bukan kata pertama ("Maria da Costa")
+_PARTIKEL = {'da', 'de', 'do', 'dos', 'das', 'di', 'du'}
+NARAN_MAKS = 60
+_POLA_NARAN = re.compile(r"^[^\W\d_](?:[^\W\d_]|['\u2019.\- ])*$")        # huruf (termasuk beraksen), spasi, apostrof, titik, tanda hubung; tanpa angka/simbol
+
+
+def naran_valid(teks):
+	teks = ' '.join(str(teks or '').split())
+	return 2 <= len(teks) <= NARAN_MAKS and bool(_POLA_NARAN.match(teks))
+
+
+def rapikan_naran(teks):
+	"""'vicente  SOUSA' -> 'Vicente Sousa'; 'maria da costa' -> 'Maria da Costa'. Kata yang sudah campur besar-kecil ('McDonald') dibiarkan."""
+	kata = ' '.join(str(teks or '').split())[:NARAN_MAKS].split(' ')
+	hasil = []
+	for i, k in enumerate(kata):
+		if i > 0 and k.lower() in _PARTIKEL:
+			hasil.append(k.lower())
+		elif k.islower() or k.isupper():
+			hasil.append(k[:1].upper() + k[1:].lower())
+		else:
+			hasil.append(k)
+	return ' '.join(hasil)
+
+
+def pisah_naran(teks):
+	"""Nama lengkap -> (first_name, last_name): kata pertama = first_name, sisanya = last_name ('Maria da Costa' -> 'Maria', 'da Costa')."""
+	kata = rapikan_naran(teks).split(' ')
+	kata = [k for k in kata if k]
+	return (kata[0], ' '.join(kata[1:])) if kata else ('', '')
+
+
+def naran_dari_email(email):
+	"""
+	Tebakan nama dari bagian depan email: 'vicente.sousa@x.com' -> 'Vicente Sousa'; 'ana_maria99@x.com' -> 'Ana Maria'.
+	Alamat layanan ('info@', 'admin@'), angka saja, atau kata terlalu pendek -> ''. Hanya tebakan: pengguna bisa mengubahnya di halaman Akun.
+	"""
+	email = str(email or '').strip()
+	if '@' not in email:
+		return ''
+	kata = [k for k in re.split(r'[._\-+0-9]+', email.split('@')[0]) if len(k) >= 2 and k.isalpha()]
+	if not kata or kata[0].lower() in _BUKAN_NAMA:
+		return ''
+	return rapikan_naran(' '.join(kata[:4]))
+
+
+def isi_naran(user, teks):
+	"""Simpan nama lengkap sebagai first_name + last_name TERPISAH (teks kosong -> keduanya dikosongkan)."""
+	user.first_name, user.last_name = pisah_naran(teks)
+	user.save(update_fields=['first_name', 'last_name'])
 
 
 def nama_tampil(user):
 	"""
 	Nama untuk sapaan di layar Video Call (ditampilkan di layar pengguna itu sendiri; TIDAK dikirim ke model AI).
-	Urutan: first_name -> bagian depan email yang berbentuk nama (mis. 'vicente.sousa@x.com' -> 'Vicente') -> '' (tamu, akun HP, atau email tanpa nama).
-	Aplikasi ini belum punya kolom nama sendiri; first_name bisa diisi admin di admin Django.
+	Urutan: first_name (dari kolom Naran) -> tebakan dari email (akun lama yang belum punya nama) -> '' (tamu / akun HP: halaman memakai "Maun / Mana").
 	"""
 	if not getattr(user, 'is_authenticated', False):
 		return ''
-	nama = (user.first_name or '').strip().split(' ')[0] if (user.first_name or '').strip() else ''
+	nama = (user.first_name or '').strip().split(' ')[0]
 	if not nama:
-		email = (user.email or '').strip()
-		if '@' in email:
-			depan = email.split('@')[0]
-			for bagian in re.split(r'[._\-+0-9]+', depan):
-				if len(bagian) >= 2 and bagian.isalpha() and bagian.lower() not in _BUKAN_NAMA:
-					nama = bagian
-					break
-	return nama[:30].capitalize() if nama else ''
+		nama = naran_dari_email(user.email).split(' ')[0]
+	return rapikan_naran(nama)[:30]
