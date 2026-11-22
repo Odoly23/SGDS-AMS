@@ -44,7 +44,7 @@ def Login(request):
 		else:
 			try:
 				_, username = normalisasi_kontak(request.POST.get('kontak'))
-			except ValueError as e:
+			except ValueError:
 				messages.error(request, 'err_contact_invalid')
 			else:
 				user = authenticate(request, username=username, password=request.POST.get('password', ''))

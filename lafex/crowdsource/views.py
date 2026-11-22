@@ -16,7 +16,7 @@ from config.decorators import allowed_users
 from config.user_utils import GRUP_ADMIN, GRUP_KONTRIBUTOR, nama_grup
 from ai import suara
 from crowdsource.models import RekamanSuara
-from crowdsource.utils import jenis_audio
+from crowdsource.utils import TIPE_AUDIO, jenis_audio, tipe_dari_nama
 from custom.models import Bahasa, KarakterAI
 from users.models import Perfil
 
@@ -113,7 +113,7 @@ def Kirim(request):
 
 	berkas.name = f'rekaman.{ext}'
 	r = RekamanSuara(kalimat=kalimat, bahasa=bahasa, gaya=gaya, audio=berkas, pengirim_kode=kode,
-	                 mime_type=(berkas.content_type or '').split(';')[0][:40], durasi_detik=min(durasi, DURASI_MAKS))
+	                 mime_type=TIPE_AUDIO[ext], durasi_detik=min(durasi, DURASI_MAKS))
 	try:
 		r.full_clean()
 	except ValidationError:
@@ -168,7 +168,7 @@ def _whisper(r):
 	"""Whisper membuat DRAF transkripsi (belum diperiksa). Return True bila ada teks."""
 	with r.audio.open('rb') as f:
 		isi = f.read()
-	teks = suara.transkripsi(isi, nama=r.audio.name.rsplit('/', 1)[-1], tipe=r.mime_type or 'audio/webm')[:1000]
+	teks = suara.transkripsi(isi, nama=r.audio.name.rsplit('/', 1)[-1], tipe=tipe_dari_nama(r.audio.name))[:1000]
 	if not teks:
 		return False
 	r.transkripsi, r.sumber_transkripsi = teks, 'otomatis'
@@ -251,7 +251,11 @@ def Audio(request, pk):
 	r = get_object_or_404(RekamanSuara, pk=pk)
 	if not r.audio:
 		raise Http404
-	return FileResponse(r.audio.open('rb'), content_type=r.mime_type or 'application/octet-stream')
+	tipe = tipe_dari_nama(r.audio.name)                                 # dari ekstensi hasil validasi isi; mime_type kiriman klien (data lama) diabaikan
+	resp = FileResponse(r.audio.open('rb'), content_type=tipe)
+	resp['Content-Disposition'] = 'inline; filename="rekaman.' + tipe.split('/')[-1].replace('mpeg', 'mp3') + '"'
+	resp['Content-Security-Policy'] = "default-src 'none'; sandbox"        # kalau pun dibuka langsung, tidak ada skrip yang boleh jalan
+	return resp
 
 
 @login_required

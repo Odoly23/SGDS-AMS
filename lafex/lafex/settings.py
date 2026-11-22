@@ -1,5 +1,6 @@
 """Pengaturan LAFEX. Nilai rahasia dibaca dari file .env."""
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,8 +9,15 @@ from django.contrib.messages import constants as messages
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-ganti-di-produksi")
-DEBUG = os.getenv("DJANGO_DEBUG", "1").lower() in ("1", "true", "yes")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
+DEBUG = os.getenv("DJANGO_DEBUG", "0").lower() in ("1", "true", "yes")
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"            # python manage.py test
+if not SECRET_KEY:
+	if DEBUG or TESTING:
+		SECRET_KEY = "dev-only-tidak-untuk-produksi"  # hanya untuk pengembangan lokal/tes
+	else:
+		from django.core.exceptions import ImproperlyConfigured
+		raise ImproperlyConfigured("Isi DJANGO_SECRET_KEY di .env (kunci acak panjang). Untuk pengembangan lokal pakai DJANGO_DEBUG=1.")
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
 
 INSTALLED_APPS = [
@@ -94,7 +102,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SUARA_MAKS_BYTE = 2 * 1024 * 1024            # batas unggah suara crowdsource (2 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 3 * 1024 * 1024
-PWA_VERSI = "v13"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
+PWA_VERSI = "v14"                             # naikkan setiap berkas statis berubah (memperbarui cache offline di HP)
 
 # ---------- Percakapan suara dengan AI (ai_chat) ----------
 # BACKEND: "dummy" = balasan contoh | "local" = model gratis/open-source (Gemma dll, server Ollama/llama.cpp/vLLM) | "anthropic" = model berbayar lewat API (Anda membayar per token).
@@ -139,3 +147,13 @@ SUARA = {
 # 1 = pelajar yang masuk dialihkan langsung ke /video-call/ (tanpa halaman Siswa). BAWAAN 0: siswa memilih materi di halaman Siswa,
 # lalu menekan "Bicara dengan LAFEX" (satu klik) ke /video-call/?mode=..&bahasa=..&topik=.. .
 HOME_LANGSUNG_BICARA = os.getenv("HOME_LANGSUNG_BICARA", "0") == "1"
+
+# ---------- Keamanan produksi (aktif bila DEBUG mati). Mikrofon browser WAJIB HTTPS, jadi HTTPS adalah bawaan produksi.
+# DJANGO_HTTPS=0 hanya untuk uji sementara tanpa HTTPS. Di belakang nginx/proxy yang mengakhiri TLS, set DJANGO_BEHIND_PROXY=1.
+if not DEBUG and not TESTING:
+	_https = os.getenv("DJANGO_HTTPS", "1") == "1"
+	SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = _https
+	SECURE_SSL_REDIRECT = _https
+	SECURE_HSTS_SECONDS = 31536000 if _https else 0
+	if os.getenv("DJANGO_BEHIND_PROXY", "0") == "1":
+		SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

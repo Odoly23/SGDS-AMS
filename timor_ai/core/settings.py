@@ -3,6 +3,7 @@ Pengaturan (settings) LAFEX-AI.
 Semua nilai rahasia dibaca dari file .env supaya tidak masuk ke Git.
 """
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,8 +16,15 @@ def env_bool(name, default="0"):
     return os.getenv(name, default).lower() in ("1", "true", "yes")
 
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-ganti-di-produksi")
-DEBUG = env_bool("DJANGO_DEBUG", "1")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "")
+DEBUG = env_bool("DJANGO_DEBUG", "0")
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"            # python manage.py test
+if not SECRET_KEY:
+    if DEBUG or TESTING:
+        SECRET_KEY = "dev-only-tidak-untuk-produksi"  # hanya untuk pengembangan lokal/tes
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("Isi DJANGO_SECRET_KEY di .env (kunci acak panjang). Untuk pengembangan lokal pakai DJANGO_DEBUG=1.")
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",") if h.strip()]
 
 INSTALLED_APPS = [
@@ -194,3 +202,13 @@ CONTRIB = {
     "MAX_VOTES_PER_DAY": int(os.getenv("CONTRIB_MAX_VOTES_PER_DAY", "100")),
     "VOTES_TO_REVIEW": 3,   # jumlah suara setuju agar naik ke antrean reviewer
 }
+
+# ---------- Keamanan produksi (aktif bila DEBUG mati). Mikrofon browser WAJIB HTTPS, jadi HTTPS adalah bawaan produksi.
+# DJANGO_HTTPS=0 hanya untuk uji sementara tanpa HTTPS. Di belakang nginx/proxy yang mengakhiri TLS, set DJANGO_BEHIND_PROXY=1.
+if not DEBUG and not TESTING:
+    _https = os.getenv("DJANGO_HTTPS", "1") == "1"
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = _https
+    SECURE_SSL_REDIRECT = _https
+    SECURE_HSTS_SECONDS = 31536000 if _https else 0
+    if os.getenv("DJANGO_BEHIND_PROXY", "0") == "1":
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

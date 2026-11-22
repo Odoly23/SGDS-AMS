@@ -3,7 +3,7 @@ from django.conf import settings
 import json
 
 import re
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, override_settings

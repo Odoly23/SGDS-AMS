@@ -14,3 +14,14 @@ def jenis_audio(head):
 	if head[:3] == b'ID3' or (len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0):
 		return 'mp3'
 	return None
+
+
+# Tipe konten yang KITA tentukan sendiri dari hasil jenis_audio(); Content-Type kiriman klien tidak pernah dipercaya
+# (kalau dipercaya, berkas "OggS<script>..." berlabel text/html akan dieksekusi sebagai halaman saat admin membukanya langsung).
+TIPE_AUDIO = {'webm': 'audio/webm', 'ogg': 'audio/ogg', 'wav': 'audio/wav', 'm4a': 'audio/mp4', 'mp3': 'audio/mpeg'}
+
+
+def tipe_dari_nama(nama):
+	"""Nama berkas hasil unggahan selalu 'rekaman.<ext>' (ext dari isi). Tidak dikenal -> application/octet-stream."""
+	ext = str(nama).rsplit('.', 1)[-1].lower() if '.' in str(nama) else ''
+	return TIPE_AUDIO.get(ext, 'application/octet-stream')

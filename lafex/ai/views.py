@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 import hashlib
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone

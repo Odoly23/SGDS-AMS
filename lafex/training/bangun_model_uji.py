@@ -1,5 +1,5 @@
 """Bangun model Whisper MINI ACAK + tokenizer + processor lokal (tanpa unduhan), dan data uji sintetis."""
-import json, math, os, struct, sys, wave
+import json, math, os, sys, wave
 import numpy as np
 from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 from transformers import (GenerationConfig, WhisperConfig, WhisperFeatureExtractor, WhisperForConditionalGeneration, WhisperProcessor, WhisperTokenizerFast)

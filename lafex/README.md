@@ -49,7 +49,7 @@ python manage.py migrate
 python manage.py seed_awal        # 3 group, 33 bahasa, 5 level, 3 karakter AI
 python manage.py seed_level1      # 20 kalimat Level 1 (DRAF AI, perlu dicek penutur asli)
 python manage.py buat_admin admin@contoh.com      # admin pertama (kata sandi diminta)
-python manage.py runserver
+python manage.py runserver        # pengembangan: .env berisi DJANGO_DEBUG=1 (bawaan tanpa itu = mode produksi yang aman)
 ```
 Buka http://127.0.0.1:8000/ . Tes: `python manage.py test`. **Node tidak diperlukan** (Bootstrap, jQuery, Font Awesome sudah ada di `main/static/main/`).
 

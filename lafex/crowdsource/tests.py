@@ -116,7 +116,6 @@ class Model(TestCase):
 # ======================================================================== halaman & unggah suara
 from django.core.cache import cache
 
-from users.models import Perfil
 
 WEBM = b'\x1aE\xdf\xa3' + b'\x00' * 60
 OGG = b'OggS' + b'\x00' * 60
@@ -273,6 +272,31 @@ class Unggah(TestCase):
 		self.assertEqual(self._berikut().json()['total'], 1)
 		RekamanSuara.objects.update(status='ditolak')
 		self.assertEqual(self._berikut().json()['total'], 0)
+
+
+class TipeKontenAman(Unggah):
+	"""Celah XSS tersimpan: Content-Type kiriman klien TIDAK boleh dipakai untuk menyajikan rekaman."""
+
+	def test_mime_klien_diabaikan_saat_simpan_dan_saat_disajikan(self):
+		jahat = b'OggS' + b'<script>alert(document.domain)</script>' + b'\x00' * 40      # lolos cek isi "OggS"
+		with override_settings(MEDIA_ROOT=self.media):
+			resp = self.client.post('/crowdsource/kirim/', {'kalimat': self.kal.pk, 'bahasa': 'fataluku', 'gaya': 'sopan', 'durasi': '3',
+			                                                'audio': SimpleUploadedFile('x.ogg', jahat, content_type='text/html')})
+			self.assertEqual(resp.status_code, 200)
+			r = RekamanSuara.objects.get()
+			self.assertEqual(r.mime_type, 'audio/ogg')                                   # ditentukan server dari isi, bukan 'text/html'
+			self.client.force_login(user_grup('adm9', 'admin'))
+			g = self.client.get(f'/crowdsource/audio/{r.pk}/')
+			self.assertEqual(g['Content-Type'], 'audio/ogg')
+			self.assertIn('sandbox', g['Content-Security-Policy'])
+			self.assertEqual(g['X-Content-Type-Options'], 'nosniff')
+
+	def test_data_lama_berlabel_text_html_tetap_disajikan_sebagai_audio(self):
+		with override_settings(MEDIA_ROOT=self.media):
+			r = RekamanSuara.objects.create(kalimat=self.kal, bahasa=Bahasa.objects.get(kode='fataluku'), gaya=KarakterAI.objects.get(kode='sopan'),
+			                                audio=SimpleUploadedFile('rekaman.webm', WEBM), mime_type='text/html')
+			self.client.force_login(user_grup('adm8', 'admin'))
+			self.assertEqual(self.client.get(f'/crowdsource/audio/{r.pk}/')['Content-Type'], 'audio/webm')
 
 
 class KontribusikuDanTinjau(Unggah):
