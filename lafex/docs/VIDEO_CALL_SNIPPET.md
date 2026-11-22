@@ -24,6 +24,12 @@ Mengganti mode/bahasa/topik hanya bisa di halaman Siswa, bukan di layar ini (sup
 ## Gambar LAFEX (hanya 12 PNG milik Anda, tidak ada gambar lain)
 `/static/img/lafex/{preman,pintar,pro}_{diam,ngomong,jempol,mikir}.png`
 Diam = `diam` | Dengerin = `mikir` | Mikir = `mikir` | Ngomong = `ngomong`<->`diam` tiap 180 ms | Benar = `jempol` 2 detik lalu `diam`.
+**Status aset:** `preman_*` sudah terpasang di `ai/static/img/lafex/` (diam, ngomong, jempol, mikir + `lambai` sebagai tambahan yang belum dipakai halaman). `pintar_*` dan `pro_*` menunggu gambarnya.
+Menyiapkan gambar baru (latar putih jadi transparan, semua pose dipotong dengan kotak yang sama agar tidak melompat):
+```bash
+pip install pillow numpy scipy
+python tools/siapkan_gambar.py --mode pintar --out ai/static/img/lafex --diam a.jpg --ngomong b.jpg --jempol c.jpg --mikir d.jpg
+```
 Bila sebuah file tidak ada, dipakai `diam.png` mode itu; bila `diam.png` juga tidak ada, gambar dikosongkan (tanpa emoji/gambar pengganti/internet).
 
 ## Suara & pengenalan

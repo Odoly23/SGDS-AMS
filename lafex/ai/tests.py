@@ -396,3 +396,26 @@ class PanggilanVideo(Dasar):
 			r = self._vc()
 		self.assertEqual((r.status_code, r.json()['kode']), (503, 'galat'))
 		self.assertEqual(Giliran.objects.count(), 0)
+
+
+class GambarLafex(TestCase):
+	"""Aset maskot: mode yang gambarnya sudah ada harus lengkap, PNG transparan, dan berukuran SAMA (supaya tidak melompat saat berganti pose)."""
+
+	def _ukuran(self, jalur):
+		import struct
+		with open(jalur, 'rb') as f:
+			kepala = f.read(33)
+		self.assertEqual(kepala[:8], b'\x89PNG\r\n\x1a\n', jalur)
+		w, h, kedalaman, warna = struct.unpack('>IIBB', kepala[16:26])
+		return w, h, warna
+
+	def test_preman_lengkap_transparan_dan_seukuran(self):
+		from django.contrib.staticfiles import finders
+		ukuran = set()
+		for pose in ('diam', 'ngomong', 'jempol', 'mikir', 'lambai'):
+			jalur = finders.find(f'img/lafex/preman_{pose}.png')
+			self.assertIsNotNone(jalur, pose)
+			w, h, warna = self._ukuran(jalur)
+			self.assertEqual(warna, 6, f'{pose}: harus RGBA (latar transparan)')
+			ukuran.add((w, h))
+		self.assertEqual(len(ukuran), 1, f'semua pose harus seukuran: {ukuran}')
